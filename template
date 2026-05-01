@@ -1,0 +1,3631 @@
+{
+  "version": 8,
+  "stations": [
+    {
+      "id": "st_mohnlxgf_jsei8c",
+      "name": "大間"
+    },
+    {
+      "id": "st_mohnm5r3_sbar18",
+      "name": "大間車庫"
+    },
+    {
+      "id": "st_mohnm9ns_dnr0k0",
+      "name": "東大間車庫"
+    },
+    {
+      "id": "st_mohnmdi4_4ptde3",
+      "name": "大間館山"
+    },
+    {
+      "id": "st_mohnmi41_c5pub2",
+      "name": "北大間"
+    },
+    {
+      "id": "st_mohnplnu_e6quu5",
+      "name": "富波"
+    },
+    {
+      "id": "st_molda6sw_ut4rh2",
+      "name": "西大間車庫"
+    }
+  ],
+  "routeNodes": [
+    {
+      "id": "rn_moih1wsn_rjucab",
+      "stationId": "st_mohnlxgf_jsei8c",
+      "label": "大間",
+      "type": "station",
+      "x": 2652,
+      "y": 1308,
+      "rotation": 90,
+      "platformNumber": "",
+      "platformCount": 2,
+      "platformLabels": [
+        "1",
+        "2"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rn_moih298m_9j44kk",
+      "stationId": "st_mohnm9ns_dnr0k0",
+      "label": "東大間車庫",
+      "type": "garage",
+      "x": 2268,
+      "y": 1800,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 3,
+      "platformLabels": [
+        "1",
+        "2",
+        "3"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rn_moih2ica_ecw6xc",
+      "stationId": "st_mohnmdi4_4ptde3",
+      "label": "大間館山",
+      "type": "station",
+      "x": 1740,
+      "y": 1668,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 2,
+      "platformLabels": [
+        "1",
+        "2"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rn_moih2nb6_vt0tl6",
+      "stationId": "st_mohnmi41_c5pub2",
+      "label": "北大間",
+      "type": "station",
+      "x": 2940,
+      "y": 1020,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 2,
+      "platformLabels": [
+        "1",
+        "2"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rn_moih38vp_fa6o5w",
+      "stationId": "st_mohnplnu_e6quu5",
+      "label": "富波",
+      "type": "terminal",
+      "x": 1308,
+      "y": 1668,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rn_moijmmvj_9mzc2m",
+      "stationId": "st_mohnm5r3_sbar18",
+      "label": "大間車庫",
+      "type": "station",
+      "x": 2268,
+      "y": 1560,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moijmylh_ux5pio",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2172,
+      "y": 1668,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rc_moil8pb9_b3aafh",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2436,
+      "y": 1668,
+      "rotation": 180,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moilaod8_cygoeu",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2172,
+      "y": 1848,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moilcc13_1py94g",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2112,
+      "y": 1716,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moilcjoq_1w4yji",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2496,
+      "y": 1716,
+      "rotation": 180,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rc_moildeth_z8il8q",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2172,
+      "y": 1716,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moildpn3_94vzzr",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2436,
+      "y": 1716,
+      "rotation": 180,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rc_moile7fb_yb6p9r",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2448,
+      "y": 1848,
+      "rotation": 180,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rc_mojnhxjc_ghwy08",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 1464,
+      "y": 1692,
+      "rotation": 0,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_mold9575_s7xsbi",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2580,
+      "y": 1068,
+      "rotation": 270,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rc_mold9i96_nf5fsw",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2652,
+      "y": 1140,
+      "rotation": 270,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing21"
+    },
+    {
+      "id": "rn_moldadrt_qrg113",
+      "stationId": "st_molda6sw_ut4rh2",
+      "label": "西大間車庫",
+      "type": "garage",
+      "x": 2556,
+      "y": 924,
+      "rotation": 90,
+      "platformNumber": "",
+      "platformCount": 2,
+      "platformLabels": [
+        "1",
+        "2"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "passing12"
+    },
+    {
+      "id": "rc_moldexhg_8eve1a",
+      "stationId": "",
+      "label": "",
+      "type": "connection",
+      "x": 2676,
+      "y": 1224,
+      "rotation": 90,
+      "platformNumber": "",
+      "platformCount": 1,
+      "platformLabels": [
+        "1"
+      ],
+      "verticalPlatformCount": 1,
+      "verticalPlatformLabels": [
+        "1"
+      ],
+      "durationMinutes": 0,
+      "connectionType": "singleCrossoverReverseZ"
+    }
+  ],
+  "routeEdges": [
+    {
+      "id": "re_moii55gt_um1mlt",
+      "fromNodeId": "rn_moih2nb6_vt0tl6",
+      "toNodeId": "rn_moih2nb6_vt0tl6",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "right",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moijmylh_9333qs",
+      "fromNodeId": "rn_moijmmvj_9mzc2m",
+      "toNodeId": "rc_moijmylh_ux5pio",
+      "fromPortSide": "left",
+      "fromPortIndex": 0,
+      "toPortSide": "top",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moil7uy0_3uoy90",
+      "fromNodeId": "rn_moih2ica_ecw6xc",
+      "toNodeId": "rc_moijmylh_ux5pio",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilb0vb_c9fzxk",
+      "fromNodeId": "rc_moilaod8_cygoeu",
+      "toNodeId": "rn_moih298m_9j44kk",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilb2nz_pj7zue",
+      "fromNodeId": "rc_moilaod8_cygoeu",
+      "toNodeId": "rn_moih298m_9j44kk",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 2,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilbxgc_t82bpy",
+      "fromNodeId": "rc_moil8pb9_b3aafh",
+      "toNodeId": "rn_moijmmvj_9mzc2m",
+      "fromPortSide": "left",
+      "fromPortIndex": 1,
+      "toPortSide": "right",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilbzkf_9uc98m",
+      "fromNodeId": "rc_moil8pb9_b3aafh",
+      "toNodeId": "rc_moijmylh_ux5pio",
+      "fromPortSide": "left",
+      "fromPortIndex": 0,
+      "toPortSide": "right",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilc2r5_7vflgc",
+      "fromNodeId": "rc_moil8pb9_b3aafh",
+      "toNodeId": "rn_moih1wsn_rjucab",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "bottom",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilczhy_glmebk",
+      "fromNodeId": "rc_moilcc13_1py94g",
+      "toNodeId": "rc_moilaod8_cygoeu",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilefjh_6cfe80",
+      "fromNodeId": "rn_moih298m_9j44kk",
+      "toNodeId": "rc_moile7fb_yb6p9r",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moileius_0854gx",
+      "fromNodeId": "rn_moih298m_9j44kk",
+      "toNodeId": "rc_moile7fb_yb6p9r",
+      "fromPortSide": "right",
+      "fromPortIndex": 2,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilely5_rn6jhx",
+      "fromNodeId": "rc_moile7fb_yb6p9r",
+      "toNodeId": "rc_moilcjoq_1w4yji",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moileo00_u4k9q8",
+      "fromNodeId": "rn_moih298m_9j44kk",
+      "toNodeId": "rc_moildpn3_94vzzr",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moileq79_pnot40",
+      "fromNodeId": "rn_moih298m_9j44kk",
+      "toNodeId": "rc_moildeth_z8il8q",
+      "fromPortSide": "left",
+      "fromPortIndex": 0,
+      "toPortSide": "right",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilermz_woo8yz",
+      "fromNodeId": "rc_moildeth_z8il8q",
+      "toNodeId": "rc_moildpn3_94vzzr",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilesvp_xtwowg",
+      "fromNodeId": "rc_moildpn3_94vzzr",
+      "toNodeId": "rc_moilcjoq_1w4yji",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilexqy_lzmxz3",
+      "fromNodeId": "rn_moih1wsn_rjucab",
+      "toNodeId": "rc_moilcjoq_1w4yji",
+      "fromPortSide": "bottom",
+      "fromPortIndex": 1,
+      "toPortSide": "right",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilezbc_5jxyys",
+      "fromNodeId": "rc_moilcc13_1py94g",
+      "toNodeId": "rc_moildeth_z8il8q",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moilf0hv_e7qcuc",
+      "fromNodeId": "rc_moilcc13_1py94g",
+      "toNodeId": "rn_moih2ica_ecw6xc",
+      "fromPortSide": "left",
+      "fromPortIndex": 0,
+      "toPortSide": "right",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_mojni7ql_nkd56q",
+      "fromNodeId": "rc_mojnhxjc_ghwy08",
+      "toNodeId": "rn_moih2ica_ecw6xc",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_mojni92z_kuzz13",
+      "fromNodeId": "rc_mojnhxjc_ghwy08",
+      "toNodeId": "rn_moih2ica_ecw6xc",
+      "fromPortSide": "right",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_mojniap2_b54mtc",
+      "fromNodeId": "rn_moih38vp_fa6o5w",
+      "toNodeId": "rc_mojnhxjc_ghwy08",
+      "fromPortSide": "right",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_mold9tmy_i8x7tb",
+      "fromNodeId": "rc_mold9575_s7xsbi",
+      "toNodeId": "rc_mold9i96_nf5fsw",
+      "fromPortSide": "bottom",
+      "fromPortIndex": 1,
+      "toPortSide": "top",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_mold9yu4_ozv0pi",
+      "fromNodeId": "rc_mold9i96_nf5fsw",
+      "toNodeId": "rn_moih2nb6_vt0tl6",
+      "fromPortSide": "top",
+      "fromPortIndex": 1,
+      "toPortSide": "left",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldbsx7_vbe36k",
+      "fromNodeId": "rc_mold9575_s7xsbi",
+      "toNodeId": "rn_moldadrt_qrg113",
+      "fromPortSide": "top",
+      "fromPortIndex": 1,
+      "toPortSide": "bottom",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldbub9_bytzyw",
+      "fromNodeId": "rc_mold9575_s7xsbi",
+      "toNodeId": "rn_moldadrt_qrg113",
+      "fromPortSide": "top",
+      "fromPortIndex": 0,
+      "toPortSide": "bottom",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldfpub_ydjyxr",
+      "fromNodeId": "rc_mold9i96_nf5fsw",
+      "toNodeId": "rc_moldexhg_8eve1a",
+      "fromPortSide": "bottom",
+      "fromPortIndex": 1,
+      "toPortSide": "top",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldfsew_85z87s",
+      "fromNodeId": "rc_moldexhg_8eve1a",
+      "toNodeId": "rn_moih1wsn_rjucab",
+      "fromPortSide": "bottom",
+      "fromPortIndex": 1,
+      "toPortSide": "top",
+      "toPortIndex": 0,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldfuu4_8qus86",
+      "fromNodeId": "rc_moldexhg_8eve1a",
+      "toNodeId": "rn_moih1wsn_rjucab",
+      "fromPortSide": "bottom",
+      "fromPortIndex": 0,
+      "toPortSide": "top",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    },
+    {
+      "id": "re_moldfy0l_vot4ko",
+      "fromNodeId": "rc_moldexhg_8eve1a",
+      "toNodeId": "rn_moih2nb6_vt0tl6",
+      "fromPortSide": "top",
+      "fromPortIndex": 0,
+      "toPortSide": "left",
+      "toPortIndex": 1,
+      "type": "main",
+      "travelMinutes": 0,
+      "bidirectional": true
+    }
+  ],
+  "routeTimeSections": [
+    {
+      "id": "rts_moiphe70_sme9gi",
+      "startNodeId": "rn_moijmmvj_9mzc2m",
+      "startPortSide": "left",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2ica_ecw6xc",
+      "endPortSide": "right",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moijmylh_9333qs",
+        "re_moil7uy0_3uoy90"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moijmmvj_9mzc2m",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moijmylh_ux5pio",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moijmylh_ux5pio",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 10,
+      "segmentMinutes": [
+        5,
+        5
+      ],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiuygaz_on12m3",
+      "startNodeId": "rn_moijmmvj_9mzc2m",
+      "startPortSide": "right",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih1wsn_rjucab",
+      "endPortSide": "bottom",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moilbxgc_t82bpy",
+        "re_moilc2r5_7vflgc"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moijmmvj_9mzc2m",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moil8pb9_b3aafh",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moil8pb9_b3aafh",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 19,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moiuyqcn_j477kw",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "bottom",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih2ica_ecw6xc",
+      "endPortSide": "right",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moilexqy_lzmxz3",
+        "re_moilesvp_xtwowg",
+        "re_moilermz_woo8yz",
+        "re_moilezbc_5jxyys",
+        "re_moilf0hv_e7qcuc"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moildpn3_94vzzr",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moildpn3_94vzzr",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moildeth_z8il8q",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moildeth_z8il8q",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 27,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moiuz92d_opey3p",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "bottom",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih298m_9j44kk",
+      "endPortSide": "right",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moilexqy_lzmxz3",
+        "re_moilesvp_xtwowg",
+        "re_moileo00_u4k9q8"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moildpn3_94vzzr",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moildpn3_94vzzr",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "right",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 20,
+      "segmentMinutes": [
+        15,
+        2,
+        3
+      ],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moiuzfl6_i8qezu",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "bottom",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2ica_ecw6xc",
+      "endPortSide": "right",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moilc2r5_7vflgc",
+        "re_moilbzkf_9uc98m",
+        "re_moil7uy0_3uoy90"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moil8pb9_b3aafh",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moil8pb9_b3aafh",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moijmylh_ux5pio",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moijmylh_ux5pio",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 26,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiuzmly_ekonyp",
+      "startNodeId": "rn_moih2ica_ecw6xc",
+      "startPortSide": "right",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih298m_9j44kk",
+      "endPortSide": "left",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moilf0hv_e7qcuc",
+        "re_moilezbc_5jxyys",
+        "re_moileq79_pnot40"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moildeth_z8il8q",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moildeth_z8il8q",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "left",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 10,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiuzy18_y6wk7n",
+      "startNodeId": "rn_moih2ica_ecw6xc",
+      "startPortSide": "right",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih298m_9j44kk",
+      "endPortSide": "left",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moilf0hv_e7qcuc",
+        "re_moilczhy_glmebk",
+        "re_moilb0vb_c9fzxk"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilaod8_cygoeu",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilaod8_cygoeu",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "left",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 10,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiv04ab_fuamo5",
+      "startNodeId": "rn_moih2ica_ecw6xc",
+      "startPortSide": "right",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih298m_9j44kk",
+      "endPortSide": "left",
+      "endPortIndex": 2,
+      "routeEdgeIds": [
+        "re_moilf0hv_e7qcuc",
+        "re_moilczhy_glmebk",
+        "re_moilb2nz_pj7zue"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcc13_1py94g",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilaod8_cygoeu",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilaod8_cygoeu",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "left",
+          "index": 2
+        }
+      ],
+      "travelMinutes": 11,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiv0fw2_mtbizf",
+      "startNodeId": "rn_moih298m_9j44kk",
+      "startPortSide": "right",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih1wsn_rjucab",
+      "endPortSide": "bottom",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moilefjh_6cfe80",
+        "re_moilely5_rn6jhx",
+        "re_moilexqy_lzmxz3"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moile7fb_yb6p9r",
+          "side": "left",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moile7fb_yb6p9r",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 21,
+      "segmentMinutes": [
+        3,
+        3,
+        15
+      ],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiv0k40_pifgl6",
+      "startNodeId": "rn_moih298m_9j44kk",
+      "startPortSide": "right",
+      "startPortIndex": 2,
+      "endNodeId": "rn_moih1wsn_rjucab",
+      "endPortSide": "bottom",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moileius_0854gx",
+        "re_moilely5_rn6jhx",
+        "re_moilexqy_lzmxz3"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih298m_9j44kk",
+          "side": "right",
+          "index": 2
+        },
+        {
+          "nodeId": "rc_moile7fb_yb6p9r",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moile7fb_yb6p9r",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moilcjoq_1w4yji",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "bottom",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 21,
+      "segmentMinutes": [
+        3,
+        3,
+        15
+      ],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moiv181n_etzlf3",
+      "startNodeId": "rn_moih2nb6_vt0tl6",
+      "startPortSide": "right",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2nb6_vt0tl6",
+      "endPortSide": "right",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moii55gt_um1mlt"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih2nb6_vt0tl6",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih2nb6_vt0tl6",
+          "side": "right",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 14,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_mojnik4e_d9ecfy",
+      "startNodeId": "rn_moih38vp_fa6o5w",
+      "startPortSide": "right",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2ica_ecw6xc",
+      "endPortSide": "left",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_mojniap2_b54mtc",
+        "re_mojni7ql_nkd56q"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih38vp_fa6o5w",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mojnhxjc_ghwy08",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mojnhxjc_ghwy08",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "left",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 61,
+      "segmentMinutes": [
+        1,
+        60
+      ],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_mojnipdi_91ttmx",
+      "startNodeId": "rn_moih38vp_fa6o5w",
+      "startPortSide": "right",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2ica_ecw6xc",
+      "endPortSide": "left",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_mojniap2_b54mtc",
+        "re_mojni92z_kuzz13"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih38vp_fa6o5w",
+          "side": "right",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mojnhxjc_ghwy08",
+          "side": "left",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mojnhxjc_ghwy08",
+          "side": "right",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih2ica_ecw6xc",
+          "side": "left",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 61,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moldgd2e_xg9qge",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "top",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih2nb6_vt0tl6",
+      "endPortSide": "left",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moldfuu4_8qus86",
+        "re_moldfy0l_vot4ko"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih2nb6_vt0tl6",
+          "side": "left",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 19,
+      "segmentMinutes": [],
+      "internalDirection": "reverse"
+    },
+    {
+      "id": "rts_moldghv7_xqyu4m",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "top",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih2nb6_vt0tl6",
+      "endPortSide": "left",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moldfsew_85z87s",
+        "re_moldfpub_ydjyxr",
+        "re_mold9yu4_ozv0pi"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moih2nb6_vt0tl6",
+          "side": "left",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 20,
+      "segmentMinutes": [
+        7,
+        7,
+        6
+      ],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moldh7dp_ma27to",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "top",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moldadrt_qrg113",
+      "endPortSide": "bottom",
+      "endPortIndex": 0,
+      "routeEdgeIds": [
+        "re_moldfsew_85z87s",
+        "re_moldfpub_ydjyxr",
+        "re_mold9tmy_i8x7tb",
+        "re_moldbub9_bytzyw"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moldadrt_qrg113",
+          "side": "bottom",
+          "index": 0
+        }
+      ],
+      "travelMinutes": 9,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moldhbmc_yjjuku",
+      "startNodeId": "rn_moih1wsn_rjucab",
+      "startPortSide": "top",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moldadrt_qrg113",
+      "endPortSide": "bottom",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moldfsew_85z87s",
+        "re_moldfpub_ydjyxr",
+        "re_mold9tmy_i8x7tb",
+        "re_moldbsx7_vbe36k"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rn_moldadrt_qrg113",
+          "side": "bottom",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 9,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moldi8br_gtfbqr",
+      "startNodeId": "rn_moldadrt_qrg113",
+      "startPortSide": "bottom",
+      "startPortIndex": 0,
+      "endNodeId": "rn_moih1wsn_rjucab",
+      "endPortSide": "top",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moldbub9_bytzyw",
+        "re_mold9tmy_i8x7tb",
+        "re_moldfpub_ydjyxr",
+        "re_moldfuu4_8qus86"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moldadrt_qrg113",
+          "side": "bottom",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 11,
+      "segmentMinutes": [
+        3,
+        3,
+        3,
+        2
+      ],
+      "internalDirection": "forward"
+    },
+    {
+      "id": "rts_moldidqp_20zh5f",
+      "startNodeId": "rn_moldadrt_qrg113",
+      "startPortSide": "bottom",
+      "startPortIndex": 1,
+      "endNodeId": "rn_moih1wsn_rjucab",
+      "endPortSide": "top",
+      "endPortIndex": 1,
+      "routeEdgeIds": [
+        "re_moldbsx7_vbe36k",
+        "re_mold9tmy_i8x7tb",
+        "re_moldfpub_ydjyxr",
+        "re_moldfuu4_8qus86"
+      ],
+      "routePorts": [
+        {
+          "nodeId": "rn_moldadrt_qrg113",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9575_s7xsbi",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "top",
+          "index": 0
+        },
+        {
+          "nodeId": "rc_mold9i96_nf5fsw",
+          "side": "bottom",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "top",
+          "index": 1
+        },
+        {
+          "nodeId": "rc_moldexhg_8eve1a",
+          "side": "bottom",
+          "index": 0
+        },
+        {
+          "nodeId": "rn_moih1wsn_rjucab",
+          "side": "top",
+          "index": 1
+        }
+      ],
+      "travelMinutes": 11,
+      "segmentMinutes": [],
+      "internalDirection": "forward"
+    }
+  ],
+  "routeTemplates": [
+    {
+      "id": "rtpl_moji5cg9_u7vrsu",
+      "name": "東大間車庫２番発",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiuzy18_y6wk7n",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiv0fw2_mtbizf",
+          "reversed": true
+        }
+      ]
+    },
+    {
+      "id": "rtpl_mojp6e9l_zug3mz",
+      "name": "臨時（大間車庫１番発）",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiuygaz_on12m3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiphe70_sme9gi",
+          "reversed": true
+        }
+      ]
+    },
+    {
+      "id": "rtpl_mojzimss_zd9kb8",
+      "name": "臨時（東大間車庫１番発）",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiuzmly_ekonyp",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuz92d_opey3p",
+          "reversed": false
+        }
+      ]
+    },
+    {
+      "id": "rtpl_mok43l1h_h29d08",
+      "name": "東大間車庫３番発",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiv04ab_fuamo5",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moiv0k40_pifgl6",
+          "reversed": true
+        }
+      ]
+    },
+    {
+      "id": "rtpl_moldpvbj_k5y0bc",
+      "name": "西大間車庫１番発",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moldi8br_gtfbqr",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldh7dp_ma27to",
+          "reversed": false
+        }
+      ]
+    },
+    {
+      "id": "rtpl_moldq4do_fv1mi0",
+      "name": "西大間車庫２番発",
+      "serviceRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldghv7_xqyu4m",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiv181n_etzlf3",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moldgd2e_xg9qge",
+          "reversed": true
+        }
+      ],
+      "deadheadEnabled": true,
+      "deadheadRouteSections": [
+        {
+          "routeTimeSectionId": "rts_moldidqp_20zh5f",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuyqcn_j477kw",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_mojnipdi_91ttmx",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_mojnik4e_d9ecfy",
+          "reversed": false
+        },
+        {
+          "routeTimeSectionId": "rts_moiuzfl6_i8qezu",
+          "reversed": true
+        },
+        {
+          "routeTimeSectionId": "rts_moldhbmc_yjjuku",
+          "reversed": false
+        }
+      ]
+    }
+  ],
+  "trainRuns": [
+    {
+      "id": "tr_mohno9q9_gxms92",
+      "name": "大間線１",
+      "runType": "passenger",
+      "lineStyle": "solid",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "05:00",
+      "serviceEndTime": "22:00",
+      "deadheadStartTime": "04:50",
+      "deadheadEndTime": "22:20",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_moji5cg9_u7vrsu",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [
+        {
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "status": "stop",
+          "dwellMinutes": 5
+        },
+        {
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "status": "stop",
+          "dwellMinutes": 5
+        }
+      ],
+      "deadheadStopSettings": [],
+      "stops": [
+        {
+          "id": "tr_mohno9q9_gxms92_auto_0_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 1,
+          "arrivalTime": "",
+          "departureTime": "04:50",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_1_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "05:00",
+          "departureTime": "05:05",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_2_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "06:06",
+          "departureTime": "06:11",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_3_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "07:12",
+          "departureTime": "07:17",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_4_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "07:43",
+          "departureTime": "07:48",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_5_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "08:08",
+          "departureTime": "08:13",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_6_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "08:27",
+          "departureTime": "08:32",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_7_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "08:51",
+          "departureTime": "08:56",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_8_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "09:23",
+          "departureTime": "09:28",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_9_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "10:29",
+          "departureTime": "10:34",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_10_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "11:35",
+          "departureTime": "11:40",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_11_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "12:06",
+          "departureTime": "12:11",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_12_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "12:31",
+          "departureTime": "12:36",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_13_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "12:50",
+          "departureTime": "12:55",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_14_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "13:14",
+          "departureTime": "13:19",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_15_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "13:46",
+          "departureTime": "13:51",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_16_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "14:52",
+          "departureTime": "14:57",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_17_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "15:58",
+          "departureTime": "16:03",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_18_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "16:29",
+          "departureTime": "16:34",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_19_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "16:54",
+          "departureTime": "16:59",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_20_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "17:13",
+          "departureTime": "17:18",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_21_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "17:37",
+          "departureTime": "17:42",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_22_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "18:09",
+          "departureTime": "18:14",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_23_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "19:15",
+          "departureTime": "19:20",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_24_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "20:21",
+          "departureTime": "20:26",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_25_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "20:52",
+          "departureTime": "20:57",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_26_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "21:17",
+          "departureTime": "21:22",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_27_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "21:36",
+          "departureTime": "21:41",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_28_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "22:00",
+          "departureTime": "22:05",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohno9q9_gxms92_auto_29_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 1,
+          "arrivalTime": "22:26",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    },
+    {
+      "id": "tr_mojzvs1e_eyazsv",
+      "name": "大間線２",
+      "runType": "passenger",
+      "lineStyle": "solid",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "06:00",
+      "serviceEndTime": "23:00",
+      "deadheadStartTime": "05:50",
+      "deadheadEndTime": "23:25",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_mok43l1h_h29d08",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [
+        {
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "status": "stop",
+          "dwellMinutes": 5
+        }
+      ],
+      "deadheadStopSettings": [],
+      "stops": [
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_0_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 2,
+          "arrivalTime": "",
+          "departureTime": "05:50",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_1_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "06:01",
+          "departureTime": "06:06",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_2_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "07:07",
+          "departureTime": "07:12",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_3_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "08:13",
+          "departureTime": "08:18",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_4_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "08:44",
+          "departureTime": "08:49",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_5_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "09:09",
+          "departureTime": "09:14",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_6_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "09:28",
+          "departureTime": "09:33",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_7_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "09:52",
+          "departureTime": "09:57",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_8_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "10:24",
+          "departureTime": "10:29",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_9_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "11:30",
+          "departureTime": "11:35",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_10_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "12:36",
+          "departureTime": "12:41",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_11_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "13:07",
+          "departureTime": "13:12",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_12_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "13:32",
+          "departureTime": "13:37",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_13_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "13:51",
+          "departureTime": "13:56",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_14_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "14:15",
+          "departureTime": "14:20",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_15_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "14:47",
+          "departureTime": "14:52",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_16_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "15:53",
+          "departureTime": "15:58",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_17_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "16:59",
+          "departureTime": "17:04",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_18_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "17:30",
+          "departureTime": "17:35",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_19_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "17:55",
+          "departureTime": "18:00",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_20_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "18:14",
+          "departureTime": "18:19",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_21_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "18:38",
+          "departureTime": "18:43",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_22_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "19:10",
+          "departureTime": "19:15",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_23_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "20:16",
+          "departureTime": "20:21",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_24_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "21:22",
+          "departureTime": "21:27",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_25_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "21:53",
+          "departureTime": "21:58",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_26_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "22:18",
+          "departureTime": "22:23",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_27_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "22:37",
+          "departureTime": "22:42",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_28_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "23:01",
+          "departureTime": "23:06",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mojzvs1e_eyazsv_auto_29_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 2,
+          "arrivalTime": "23:27",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    },
+    {
+      "id": "tr_molcmrfw_c5htpm",
+      "name": "大間線３",
+      "runType": "passenger",
+      "lineStyle": "solid",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "05:00",
+      "serviceEndTime": "21:30",
+      "deadheadStartTime": "04:50",
+      "deadheadEndTime": "21:40",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_moldpvbj_k5y0bc",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [
+        {
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "status": "stop",
+          "dwellMinutes": 5
+        }
+      ],
+      "deadheadStopSettings": [
+        {
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "status": "stop",
+          "dwellMinutes": 20
+        }
+      ],
+      "stops": [
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_0_rn_moldadrt_qrg113",
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "routePortIndex": 0,
+          "arrivalTime": "",
+          "departureTime": "04:50",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_1_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "05:01",
+          "departureTime": "05:06",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_2_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "05:33",
+          "departureTime": "05:38",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_3_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "06:39",
+          "departureTime": "06:44",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_4_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "07:45",
+          "departureTime": "07:50",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_5_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "08:16",
+          "departureTime": "08:21",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_6_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "08:41",
+          "departureTime": "08:46",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_7_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "09:00",
+          "departureTime": "09:05",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_8_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "09:24",
+          "departureTime": "09:29",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_9_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "09:56",
+          "departureTime": "10:01",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_10_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "11:02",
+          "departureTime": "11:07",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_11_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "12:08",
+          "departureTime": "12:13",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_12_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "12:39",
+          "departureTime": "12:44",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_13_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "13:04",
+          "departureTime": "13:09",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_14_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "13:23",
+          "departureTime": "13:28",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_15_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "13:47",
+          "departureTime": "13:52",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_16_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "14:19",
+          "departureTime": "14:24",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_17_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "15:25",
+          "departureTime": "15:30",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_18_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "16:31",
+          "departureTime": "16:36",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_19_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "17:02",
+          "departureTime": "17:07",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_20_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "17:27",
+          "departureTime": "17:32",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_21_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "17:46",
+          "departureTime": "17:51",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_22_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "18:10",
+          "departureTime": "18:15",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_23_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "18:42",
+          "departureTime": "18:47",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_24_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "19:48",
+          "departureTime": "19:53",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_25_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "20:54",
+          "departureTime": "20:59",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_26_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "21:25",
+          "departureTime": "21:30",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molcmrfw_c5htpm_auto_27_rn_moldadrt_qrg113",
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "routePortIndex": 0,
+          "arrivalTime": "21:39",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    },
+    {
+      "id": "tr_molmpskc_omut9y",
+      "name": "大間線４",
+      "runType": "passenger",
+      "lineStyle": "solid",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "07:20",
+      "serviceEndTime": "19:20",
+      "deadheadStartTime": "07:10",
+      "deadheadEndTime": "19:40",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_moldq4do_fv1mi0",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [
+        {
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "status": "stop",
+          "dwellMinutes": 5
+        }
+      ],
+      "deadheadStopSettings": [
+        {
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "status": "stop",
+          "dwellMinutes": 20
+        }
+      ],
+      "stops": [
+        {
+          "id": "tr_molmpskc_omut9y_auto_0_rn_moldadrt_qrg113",
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "routePortIndex": 1,
+          "arrivalTime": "",
+          "departureTime": "07:10",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_1_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "07:21",
+          "departureTime": "07:26",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_2_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "07:53",
+          "departureTime": "07:58",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_3_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "08:59",
+          "departureTime": "09:04",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_4_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "10:05",
+          "departureTime": "10:10",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_5_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "10:36",
+          "departureTime": "10:41",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_6_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "11:01",
+          "departureTime": "11:06",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_7_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "11:20",
+          "departureTime": "11:25",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_8_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "11:44",
+          "departureTime": "11:49",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_9_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "12:16",
+          "departureTime": "12:21",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_10_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "13:22",
+          "departureTime": "13:27",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_11_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "14:28",
+          "departureTime": "14:33",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_12_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "14:59",
+          "departureTime": "15:04",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_13_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "15:24",
+          "departureTime": "15:29",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_14_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "15:43",
+          "departureTime": "15:48",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_15_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "16:07",
+          "departureTime": "16:12",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_16_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "16:39",
+          "departureTime": "16:44",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_17_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "17:45",
+          "departureTime": "17:50",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_18_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "18:51",
+          "departureTime": "18:56",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_19_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "19:22",
+          "departureTime": "19:27",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_molmpskc_omut9y_auto_20_rn_moldadrt_qrg113",
+          "routeNodeId": "rn_moldadrt_qrg113",
+          "routePortIndex": 1,
+          "arrivalTime": "19:36",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    },
+    {
+      "id": "tr_mohnogzm_ssb53k",
+      "name": "大間線（臨時１）",
+      "runType": "passenger",
+      "lineStyle": "dashed",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "07:00",
+      "serviceEndTime": "12:00",
+      "deadheadStartTime": "06:30",
+      "deadheadEndTime": "15:10",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_mojp6e9l_zug3mz",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [],
+      "deadheadStopSettings": [],
+      "stops": [
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_0_rn_moijmmvj_9mzc2m",
+          "routeNodeId": "rn_moijmmvj_9mzc2m",
+          "routePortIndex": 0,
+          "arrivalTime": "",
+          "departureTime": "06:30",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_1_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "06:49",
+          "departureTime": "06:54",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_2_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "07:14",
+          "departureTime": "07:19",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_3_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "07:33",
+          "departureTime": "07:38",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_4_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "07:57",
+          "departureTime": "08:02",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_5_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "08:29",
+          "departureTime": "08:34",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_6_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "09:35",
+          "departureTime": "09:40",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_7_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "10:41",
+          "departureTime": "10:46",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_8_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "11:12",
+          "departureTime": "11:17",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_9_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "11:37",
+          "departureTime": "11:42",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_10_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "11:56",
+          "departureTime": "12:01",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_11_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "12:20",
+          "departureTime": "12:25",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_12_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "12:52",
+          "departureTime": "12:57",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_13_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "13:58",
+          "departureTime": "14:03",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_14_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "15:04",
+          "departureTime": "15:09",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnogzm_ssb53k_auto_15_rn_moijmmvj_9mzc2m",
+          "routeNodeId": "rn_moijmmvj_9mzc2m",
+          "routePortIndex": 0,
+          "arrivalTime": "15:19",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    },
+    {
+      "id": "tr_mohnojon_118wpc",
+      "name": "大間線（臨時２）",
+      "runType": "passenger",
+      "lineStyle": "dashed",
+      "color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 1
+      },
+      "operationGroup": "",
+      "repeat": 1,
+      "serviceStartTime": "07:00",
+      "serviceEndTime": "15:00",
+      "deadheadStartTime": "06:30",
+      "deadheadEndTime": "15:20",
+      "defaultStopMinutes": 5,
+      "routeTemplateId": "rtpl_mojzimss_zd9kb8",
+      "serviceRouteNodeIds": [],
+      "deadheadRouteNodeIds": [],
+      "serviceRouteSections": [],
+      "deadheadRouteSections": [],
+      "repeatRangeStartIndex": null,
+      "repeatRangeEndIndex": null,
+      "repeatRangeCount": 1,
+      "stopSettings": [],
+      "deadheadStopSettings": [],
+      "stops": [
+        {
+          "id": "tr_mohnojon_118wpc_auto_0_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 0,
+          "arrivalTime": "",
+          "departureTime": "06:30",
+          "status": "stop",
+          "isDeadhead": true
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_1_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "06:40",
+          "departureTime": "06:45",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_2_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "07:46",
+          "departureTime": "07:51",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_3_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "08:52",
+          "departureTime": "08:57",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_4_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "09:23",
+          "departureTime": "09:28",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_5_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "09:48",
+          "departureTime": "09:53",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_6_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "10:07",
+          "departureTime": "10:12",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_7_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "10:31",
+          "departureTime": "10:36",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_8_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 1,
+          "arrivalTime": "11:03",
+          "departureTime": "11:08",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_9_rn_moih38vp_fa6o5w",
+          "routeNodeId": "rn_moih38vp_fa6o5w",
+          "routePortIndex": 0,
+          "arrivalTime": "12:09",
+          "departureTime": "12:14",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_10_rn_moih2ica_ecw6xc",
+          "routeNodeId": "rn_moih2ica_ecw6xc",
+          "routePortIndex": 0,
+          "arrivalTime": "13:15",
+          "departureTime": "13:20",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_11_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 0,
+          "arrivalTime": "13:46",
+          "departureTime": "13:51",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_12_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 0,
+          "arrivalTime": "14:11",
+          "departureTime": "14:16",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_13_rn_moih2nb6_vt0tl6",
+          "routeNodeId": "rn_moih2nb6_vt0tl6",
+          "routePortIndex": 1,
+          "arrivalTime": "14:30",
+          "departureTime": "14:35",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_14_rn_moih1wsn_rjucab",
+          "routeNodeId": "rn_moih1wsn_rjucab",
+          "routePortIndex": 1,
+          "arrivalTime": "14:54",
+          "departureTime": "14:59",
+          "status": "stop",
+          "isDeadhead": false
+        },
+        {
+          "id": "tr_mohnojon_118wpc_auto_15_rn_moih298m_9j44kk",
+          "routeNodeId": "rn_moih298m_9j44kk",
+          "routePortIndex": 0,
+          "arrivalTime": "15:19",
+          "departureTime": "",
+          "status": "stop",
+          "isDeadhead": true
+        }
+      ]
+    }
+  ],
+  "routeReadDirection": "leftToRight"
+}

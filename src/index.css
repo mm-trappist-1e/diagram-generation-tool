@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.dark body {
+    background-color: rgb(2 6 23);
+  }
+
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    border-color: rgb(71 85 105);
+    background-color: rgb(15 23 42);
+    color: rgb(241 245 249);
+  }
+
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    color: rgb(100 116 139);
+  }
+
+  html.dark input[type="color"] {
+    background-color: rgb(30 41 59);
+  }
+
+  html.dark input:disabled,
+  html.dark select:disabled,
+  html.dark textarea:disabled {
+    border-color: rgb(51 65 85);
+    background-color: rgb(30 41 59);
+    color: rgb(148 163 184);
+  }
+}
+
+@layer utilities {
+  html.dark .bg-white {
+    background-color: rgb(30 41 59);
+  }
+
+  html.dark .bg-slate-100,
+  html.dark .bg-gray-50 {
+    background-color: rgb(15 23 42);
+  }
+
+  html.dark .bg-gray-100,
+  html.dark .bg-slate-50,
+  html.dark .bg-slate-200 {
+    background-color: rgb(51 65 85);
+  }
+
+  html.dark .border-gray-200,
+  html.dark .border-gray-300,
+  html.dark .border-slate-200,
+  html.dark .border-slate-300 {
+    border-color: rgb(71 85 105);
+  }
+
+  html.dark .text-gray-400,
+  html.dark .text-gray-500,
+  html.dark .text-slate-400,
+  html.dark .text-slate-500 {
+    color: rgb(148 163 184);
+  }
+
+  html.dark .text-gray-600,
+  html.dark .text-gray-700,
+  html.dark .text-gray-800,
+  html.dark .text-gray-900,
+  html.dark .text-slate-600,
+  html.dark .text-slate-700,
+  html.dark .text-slate-800,
+  html.dark .text-slate-900 {
+    color: rgb(241 245 249);
+  }
+
+  html.dark .route-map-canvas.bg-gray-50 {
+    background-color: rgb(249 250 251);
+  }
+}

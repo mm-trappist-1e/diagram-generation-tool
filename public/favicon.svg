@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 396 396" width="396" height="396">
+  <rect width="396" height="396" rx="56" fill="#F5F0E8"/>
+  <line x1="30" y1="99"  x2="366" y2="99"  stroke="#00BFBF" stroke-opacity="0.35" stroke-width="1.2"/>
+  <line x1="30" y1="165" x2="366" y2="165" stroke="#00BFBF" stroke-opacity="0.35" stroke-width="1.2"/>
+  <line x1="30" y1="231" x2="366" y2="231" stroke="#0055A5" stroke-opacity="0.40" stroke-width="2"/>
+  <line x1="30" y1="297" x2="366" y2="297" stroke="#00BFBF" stroke-opacity="0.35" stroke-width="1.2"/>
+  <line x1="99"  y1="30" x2="99"  y2="366" stroke="#00BFBF" stroke-opacity="0.25" stroke-width="1.2"/>
+  <line x1="165" y1="30" x2="165" y2="366" stroke="#00BFBF" stroke-opacity="0.25" stroke-width="1.2"/>
+  <line x1="231" y1="30" x2="231" y2="366" stroke="#00BFBF" stroke-opacity="0.25" stroke-width="1.2"/>
+  <line x1="297" y1="30" x2="297" y2="366" stroke="#00BFBF" stroke-opacity="0.25" stroke-width="1.2"/>
+  <!-- red: long start dwell, then departs -->
+  <polyline points="30,330 99,330 231,66 264,66 366,231" fill="none" stroke="#C0392B" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- black: mid stop then long terminal -->
+  <polyline points="30,66 132,231 165,231 297,330 366,330" fill="none" stroke="#1A1A1A" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- blue: short stop -->
+  <polyline points="30,198 165,99 198,99 366,198" fill="none" stroke="#2980B9" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -4,12 +4,20 @@ import { jSONToState } from "./lib/StateValidator";
 import { Actions, State } from "./reducer/reducer";
 import { Upload } from "./svg/Upload";
 
-const createFileName = (extension: "json" | "csv"): string => {
+const sanitizeFileNamePart = (value: string) => {
+  const normalized = value.trim().replace(/[\\/:*?"<>|]+/g, "-");
+  return normalized || "diagram";
+};
+
+const createFileName = (
+  extension: "json" | "csv",
+  prefix = "diagram"
+): string => {
   const d = new Date();
   const year = d.getFullYear().toString().padStart(4, "0");
   const month = (d.getMonth() + 1).toString().padStart(2, "0");
   const date = d.getDate().toString().padStart(2, "0");
-  return `diagram-${year}-${month}-${date}.${extension}`;
+  return `${sanitizeFileNamePart(prefix)}-${year}-${month}-${date}.${extension}`;
 };
 
 const downloadText = (
@@ -28,15 +36,18 @@ const downloadText = (
 
 type Props = {
   dispatch: Dispatch<Actions>;
+  workspaceName: string;
 };
 
 type ExportControlsProps = {
   state: State;
+  fileNamePrefix?: string;
   className?: string;
 };
 
 export const ExportControls = ({
   state,
+  fileNamePrefix,
   className = "",
 }: ExportControlsProps) => {
   const downloadJson = (event: MouseEvent<HTMLButtonElement>) => {
@@ -44,12 +55,17 @@ export const ExportControls = ({
       event,
       JSON.stringify(state, null, 2),
       "text/json",
-      createFileName("json")
+      createFileName("json", fileNamePrefix)
     );
   };
 
   const downloadCsv = (event: MouseEvent<HTMLButtonElement>) => {
-    downloadText(event, stateToCsv(state), "text/csv", createFileName("csv"));
+    downloadText(
+      event,
+      stateToCsv(state),
+      "text/csv",
+      createFileName("csv", fileNamePrefix)
+    );
   };
 
   return (
@@ -72,7 +88,7 @@ export const ExportControls = ({
   );
 };
 
-export const ProjectFileSection = ({ dispatch }: Props) => {
+export const ProjectFileSection = ({ dispatch, workspaceName }: Props) => {
   const upload = (file: File) => {
     const fileReader = new FileReader();
 
@@ -126,7 +142,9 @@ export const ProjectFileSection = ({ dispatch }: Props) => {
             <Upload />
             <p className="text-sm font-semibold">クリックでアップロード</p>
             <p className="text-sm">またはドラッグ&ドロップしてください。</p>
-            <p className="text-xs">JSON</p>
+            <p className="text-xs">
+              JSON / 現在のワークスペース: {workspaceName || "名称未設定"}
+            </p>
           </div>
           <input
             id="dropzone-file"

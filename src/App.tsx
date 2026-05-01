@@ -1,8 +1,8 @@
-import { Dispatch, useEffect, useReducer, useState } from "react";
+import { Dispatch, useEffect, useState } from "react";
 import { DiagramChartSection } from "./DiagramChartSection";
 import { getInitialState } from "./lib/initial-state";
 import { normalizeState } from "./lib/StateValidator";
-import { TrainRouteKey } from "./lib/domain";
+import { createId, TrainRouteKey } from "./lib/domain";
 import { ExportControls, ProjectFileSection } from "./ProjectFileSection";
 import { Actions, reducer, State } from "./reducer/reducer";
 import { RouteNetworkEditor } from "./RouteNetworkEditor";
@@ -10,7 +10,9 @@ import { StationMasterPanel } from "./StationMasterPanel";
 import { TrainOperationSection } from "./TrainOperationSection";
 import { SiteMetaFooter, UsageGuide } from "./UsageGuide";
 
-const localStorageKey = "diagram-generation-tool:a-train-state-v3";
+const legacyLocalStorageKey = "diagram-generation-tool:a-train-state-v3";
+const legacyLocalStorageBackupKey = `${legacyLocalStorageKey}:last-good`;
+const localStorageKey = "diagram-generation-tool:workspaces-v1";
 const localStorageBackupKey = `${localStorageKey}:last-good`;
 const localStorageFailedRestoreKey = `${localStorageKey}:failed-restore`;
 const themeStorageKey = "diagram-generation-tool:theme";
@@ -32,6 +34,29 @@ type HistoryAction =
       type: "redo";
     };
 
+type Workspace = {
+  id: string;
+  name: string;
+  history: HistoryState;
+};
+
+type WorkspaceStore = {
+  activeWorkspaceId: string;
+  workspaces: Workspace[];
+};
+
+type StoredWorkspace = {
+  id: string;
+  name: string;
+  state: State;
+};
+
+type StoredWorkspaceStore = {
+  version: 1;
+  activeWorkspaceId: string;
+  workspaces: StoredWorkspace[];
+};
+
 const handleBeforeUnloadEvent = (event: BeforeUnloadEvent) => {
   event.preventDefault();
   event.returnValue = "";
@@ -45,18 +70,21 @@ const isEmptyState = (state: State) =>
   state.routeTemplates.length === 0 &&
   state.trainRuns.length === 0;
 
-const normalizeStoredState = (serialized: string): State | null => {
-  try {
-    return normalizeState(JSON.parse(serialized));
-  } catch {
-    return null;
-  }
-};
+const recalculateState = (state: State) =>
+  reducer(state, { type: "changeFullState", payload: { state } });
+
+const createWorkspace = (name: string, state: State): Workspace => ({
+  id: createId("ws"),
+  name,
+  history: {
+    past: [],
+    present: recalculateState(state),
+    future: [],
+    lastHistoryGroup: undefined,
+  },
+});
 
 const loadInitialState = (): State => {
-  const recalculateState = (state: State) =>
-    reducer(state, { type: "changeFullState", payload: { state } });
-
   if (typeof window === "undefined") return getInitialState();
 
   const loadFromStorage = (key: string) => {
@@ -67,15 +95,15 @@ const loadInitialState = (): State => {
       const state = normalizeState(JSON.parse(saved));
       return state ? recalculateState(state) : null;
     } catch {
-      if (key === localStorageKey) {
+      if (key === legacyLocalStorageKey) {
         window.localStorage.setItem(localStorageFailedRestoreKey, saved);
       }
       return null;
     }
   };
 
-  const savedState = loadFromStorage(localStorageKey);
-  const backupState = loadFromStorage(localStorageBackupKey);
+  const savedState = loadFromStorage(legacyLocalStorageKey);
+  const backupState = loadFromStorage(legacyLocalStorageBackupKey);
   if (
     backupState &&
     !isEmptyState(backupState) &&
@@ -87,6 +115,78 @@ const loadInitialState = (): State => {
   return recalculateState(getInitialState());
 };
 
+const normalizeStoredWorkspaceStore = (
+  serialized: string
+): WorkspaceStore | null => {
+  try {
+    const parsed = JSON.parse(serialized) as Partial<StoredWorkspaceStore>;
+    if (!Array.isArray(parsed.workspaces)) return null;
+    const workspaces = parsed.workspaces.flatMap((workspace, index) => {
+      const state = normalizeState(workspace.state);
+      if (!state) return [];
+      return [
+        {
+          id: typeof workspace.id === "string" ? workspace.id : createId("ws"),
+          name:
+            typeof workspace.name === "string" && workspace.name.trim()
+              ? workspace.name
+              : `ワークスペース ${index + 1}`,
+          history: {
+            past: [],
+            present: recalculateState(state),
+            future: [],
+            lastHistoryGroup: undefined,
+          },
+        } satisfies Workspace,
+      ];
+    });
+    if (workspaces.length === 0) return null;
+    const activeWorkspaceId = workspaces.some(
+      (workspace) => workspace.id === parsed.activeWorkspaceId
+    )
+      ? String(parsed.activeWorkspaceId)
+      : workspaces[0].id;
+    return { activeWorkspaceId, workspaces };
+  } catch {
+    return null;
+  }
+};
+
+const loadInitialWorkspaceStore = (): WorkspaceStore => {
+  if (typeof window === "undefined") {
+    const workspace = createWorkspace("ワークスペース 1", getInitialState());
+    return { activeWorkspaceId: workspace.id, workspaces: [workspace] };
+  }
+
+  const loadFromStorage = (key: string) => {
+    const saved = window.localStorage.getItem(key);
+    if (!saved) return null;
+    const store = normalizeStoredWorkspaceStore(saved);
+    if (!store && key === localStorageKey) {
+      window.localStorage.setItem(localStorageFailedRestoreKey, saved);
+    }
+    return store;
+  };
+
+  const savedStore = loadFromStorage(localStorageKey);
+  const backupStore = loadFromStorage(localStorageBackupKey);
+  if (
+    backupStore &&
+    backupStore.workspaces.some((workspace) => !isEmptyState(workspace.history.present)) &&
+    (!savedStore ||
+      savedStore.workspaces.every((workspace) =>
+        isEmptyState(workspace.history.present)
+      ))
+  ) {
+    return backupStore;
+  }
+  if (savedStore) return savedStore;
+
+  const legacyState = loadInitialState();
+  const workspace = createWorkspace("ワークスペース 1", legacyState);
+  return { activeWorkspaceId: workspace.id, workspaces: [workspace] };
+};
+
 const isEditableTarget = (target: EventTarget | null) => {
   if (!(target instanceof HTMLElement)) return false;
   return (
@@ -96,13 +196,6 @@ const isEditableTarget = (target: EventTarget | null) => {
     target.tagName === "SELECT"
   );
 };
-
-const loadInitialHistoryState = (): HistoryState => ({
-  past: [],
-  present: loadInitialState(),
-  future: [],
-  lastHistoryGroup: undefined,
-});
 
 const loadInitialDarkTheme = () => {
   if (typeof window === "undefined") return false;
@@ -161,18 +254,101 @@ const historyReducer = (
 };
 
 export const App = () => {
-  const [historyState, historyDispatch] = useReducer(
-    historyReducer,
-    undefined,
-    loadInitialHistoryState
+  const [workspaceStore, setWorkspaceStore] = useState(
+    loadInitialWorkspaceStore
   );
-  const state = historyState.present;
-  const dispatch: Dispatch<Actions> = (action) => historyDispatch(action);
+  const activeWorkspace =
+    workspaceStore.workspaces.find(
+      (workspace) => workspace.id === workspaceStore.activeWorkspaceId
+    ) ?? workspaceStore.workspaces[0];
+  const state = activeWorkspace.history.present;
+  const workspaceCount = workspaceStore.workspaces.length;
+  const dispatchHistoryAction = (action: HistoryAction) => {
+    setWorkspaceStore((currentStore) => ({
+      ...currentStore,
+      workspaces: currentStore.workspaces.map((workspace) =>
+        workspace.id === currentStore.activeWorkspaceId
+          ? {
+              ...workspace,
+              history: historyReducer(workspace.history, action),
+            }
+          : workspace
+      ),
+    }));
+  };
+  const dispatch: Dispatch<Actions> = (action) => dispatchHistoryAction(action);
   const [selectedTrainRunId, setSelectedTrainRunId] = useState("");
   const [selectedRouteTemplateId, setSelectedRouteTemplateId] = useState("");
   const [routeTemplateEditKey, setRouteTemplateEditKey] =
     useState<TrainRouteKey>("serviceRouteSections");
   const [isDarkTheme, setIsDarkTheme] = useState(loadInitialDarkTheme);
+
+  const createWorkspaceName = () => {
+    let index = workspaceCount + 1;
+    const names = new Set(
+      workspaceStore.workspaces.map((workspace) => workspace.name)
+    );
+    while (names.has(`ワークスペース ${index}`)) index += 1;
+    return `ワークスペース ${index}`;
+  };
+
+  const addWorkspace = () => {
+    const workspace = createWorkspace(createWorkspaceName(), getInitialState());
+    setWorkspaceStore((currentStore) => ({
+      activeWorkspaceId: workspace.id,
+      workspaces: [...currentStore.workspaces, workspace],
+    }));
+  };
+
+  const duplicateWorkspace = () => {
+    const workspace = createWorkspace(
+      `${activeWorkspace.name} コピー`,
+      activeWorkspace.history.present
+    );
+    setWorkspaceStore((currentStore) => ({
+      activeWorkspaceId: workspace.id,
+      workspaces: [...currentStore.workspaces, workspace],
+    }));
+  };
+
+  const renameActiveWorkspace = (name: string) => {
+    setWorkspaceStore((currentStore) => ({
+      ...currentStore,
+      workspaces: currentStore.workspaces.map((workspace) =>
+        workspace.id === currentStore.activeWorkspaceId
+          ? { ...workspace, name }
+          : workspace
+      ),
+    }));
+  };
+
+  const removeActiveWorkspace = () => {
+    if (workspaceCount <= 1) return;
+    setWorkspaceStore((currentStore) => {
+      const currentIndex = currentStore.workspaces.findIndex(
+        (workspace) => workspace.id === currentStore.activeWorkspaceId
+      );
+      const workspaces = currentStore.workspaces.filter(
+        (workspace) => workspace.id !== currentStore.activeWorkspaceId
+      );
+      const nextActiveWorkspace =
+        workspaces[Math.max(0, Math.min(currentIndex, workspaces.length - 1))];
+      return {
+        activeWorkspaceId: nextActiveWorkspace.id,
+        workspaces,
+      };
+    });
+  };
+
+  const serializeWorkspaceStore = (): StoredWorkspaceStore => ({
+    version: 1,
+    activeWorkspaceId: workspaceStore.activeWorkspaceId,
+    workspaces: workspaceStore.workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      state: workspace.history.present,
+    })),
+  });
 
   useEffect(() => {
     window.addEventListener("beforeunload", handleBeforeUnloadEvent, true);
@@ -189,19 +365,42 @@ export const App = () => {
   }, [isDarkTheme]);
 
   useEffect(() => {
-    const serialized = JSON.stringify(state);
+    const storedWorkspaceStore = serializeWorkspaceStore();
+    const serialized = JSON.stringify(storedWorkspaceStore);
     const current = window.localStorage.getItem(localStorageKey);
 
-    if (isEmptyState(state) && current) {
-      const currentState = normalizeStoredState(current);
-      if (!currentState || !isEmptyState(currentState)) return;
+    if (
+      storedWorkspaceStore.workspaces.every((workspace) =>
+        isEmptyState(workspace.state)
+      ) &&
+      current
+    ) {
+      const currentStore = normalizeStoredWorkspaceStore(current);
+      if (
+        currentStore &&
+        currentStore.workspaces.some(
+          (workspace) => !isEmptyState(workspace.history.present)
+        )
+      ) {
+        return;
+      }
     }
 
     window.localStorage.setItem(localStorageKey, serialized);
-    if (!isEmptyState(state)) {
+    if (
+      storedWorkspaceStore.workspaces.some(
+        (workspace) => !isEmptyState(workspace.state)
+      )
+    ) {
       window.localStorage.setItem(localStorageBackupKey, serialized);
     }
-  }, [state]);
+  }, [workspaceStore]);
+
+  useEffect(() => {
+    setSelectedTrainRunId("");
+    setSelectedRouteTemplateId("");
+    setRouteTemplateEditKey("serviceRouteSections");
+  }, [workspaceStore.activeWorkspaceId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -211,7 +410,7 @@ export const App = () => {
 
       if (event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
-        historyDispatch({ type: "undo" });
+        dispatchHistoryAction({ type: "undo" });
         return;
       }
 
@@ -220,7 +419,7 @@ export const App = () => {
         (event.key.toLowerCase() === "z" && event.shiftKey)
       ) {
         event.preventDefault();
-        historyDispatch({ type: "redo" });
+        dispatchHistoryAction({ type: "redo" });
       }
     };
 
@@ -243,9 +442,77 @@ export const App = () => {
             >
               {isDarkTheme ? "ライト" : "ダーク"}
             </button>
-            <ExportControls state={state} />
           </div>
         </header>
+
+        <section className="mx-4 flex flex-col gap-3 rounded-lg bg-white p-3 dark:bg-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-100">
+              ワークスペース
+            </span>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+              {workspaceStore.workspaces.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  type="button"
+                  onClick={() =>
+                    setWorkspaceStore((currentStore) => ({
+                      ...currentStore,
+                      activeWorkspaceId: workspace.id,
+                    }))
+                  }
+                  className={`max-w-[220px] truncate rounded border px-3 py-2 text-sm ${
+                    workspace.id === activeWorkspace.id
+                      ? "border-blue-700 bg-blue-50 font-bold text-blue-950 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-50"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {workspace.name || "名称未設定"}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addWorkspace}
+              className="rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950"
+            >
+              新規
+            </button>
+            <button
+              type="button"
+              onClick={duplicateWorkspace}
+              className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
+            >
+              複製
+            </button>
+            <button
+              type="button"
+              disabled={workspaceCount <= 1}
+              onClick={removeActiveWorkspace}
+              className="rounded border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:border-red-500 dark:bg-slate-900 dark:text-red-200 dark:hover:bg-red-950 dark:disabled:border-slate-700 dark:disabled:text-slate-500"
+            >
+              削除
+            </button>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,360px)_minmax(0,1fr)_auto] lg:items-end">
+            <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-100">
+              ワークスペース名
+              <input
+                type="text"
+                value={activeWorkspace.name}
+                onChange={(event) => renameActiveWorkspace(event.target.value)}
+                className="rounded border border-slate-300 bg-white p-2 text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </label>
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              新規を押すと、現在のデータを残したまま空のワークスペースを開始できます。
+            </p>
+            <ExportControls
+              state={state}
+              fileNamePrefix={activeWorkspace.name || "workspace"}
+            />
+          </div>
+        </section>
 
         <div className="grid gap-4 px-4 lg:grid-cols-[360px_minmax(0,1fr)]">
           <StationMasterPanel state={state} dispatch={dispatch} />
@@ -269,7 +536,10 @@ export const App = () => {
               isDarkTheme={isDarkTheme}
             />
             <DiagramChartSection state={state} isDarkTheme={isDarkTheme} />
-            <ProjectFileSection dispatch={dispatch} />
+            <ProjectFileSection
+              dispatch={dispatch}
+              workspaceName={activeWorkspace.name}
+            />
             <UsageGuide />
           </main>
         </div>

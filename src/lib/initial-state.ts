@@ -1,6 +1,6 @@
 import { State } from "../reducer/reducer";
 import { normalizeState } from "./StateValidator";
-import defaultWorkspaceTemplateJson from "../../template?raw";
+import defaultWorkspaceTemplateJson from "../data/default-workspace.json?raw";
 
 export const getInitialState = (): State => ({
   version: 8,

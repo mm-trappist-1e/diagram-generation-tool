@@ -236,9 +236,8 @@ export const isValidTimeString = (value: string) =>
   value === "" || /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
 export const timeStringToDate = (value: string, dayOffset = 0) => {
-  const date = new Date(`2022-08-26T${value}:00`);
-  date.setDate(date.getDate() + dayOffset);
-  return date;
+  const [hours, minutes] = value.split(":").map(Number);
+  return new Date(2000, 0, 1 + dayOffset, hours, minutes, 0, 0);
 };
 
 export const dateToTimeString = (value: unknown) => {

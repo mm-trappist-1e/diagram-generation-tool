@@ -1,6 +1,6 @@
 import { Dispatch, useEffect, useState } from "react";
 import { DiagramChartSection } from "./DiagramChartSection";
-import { getInitialState } from "./lib/initial-state";
+import { getDefaultWorkspaceState, getInitialState } from "./lib/initial-state";
 import { normalizeState } from "./lib/StateValidator";
 import { createId, TrainRouteKey } from "./lib/domain";
 import { ExportControls, ProjectFileSection } from "./ProjectFileSection";
@@ -85,7 +85,7 @@ const createWorkspace = (name: string, state: State): Workspace => ({
 });
 
 const loadInitialState = (): State => {
-  if (typeof window === "undefined") return getInitialState();
+  if (typeof window === "undefined") return getDefaultWorkspaceState();
 
   const loadFromStorage = (key: string) => {
     const saved = window.localStorage.getItem(key);
@@ -111,8 +111,8 @@ const loadInitialState = (): State => {
   ) {
     return backupState;
   }
-  if (savedState) return savedState;
-  return recalculateState(getInitialState());
+  if (savedState && !isEmptyState(savedState)) return savedState;
+  return recalculateState(getDefaultWorkspaceState());
 };
 
 const normalizeStoredWorkspaceStore = (
@@ -154,7 +154,10 @@ const normalizeStoredWorkspaceStore = (
 
 const loadInitialWorkspaceStore = (): WorkspaceStore => {
   if (typeof window === "undefined") {
-    const workspace = createWorkspace("ワークスペース 1", getInitialState());
+    const workspace = createWorkspace(
+      "ワークスペース 1",
+      getDefaultWorkspaceState()
+    );
     return { activeWorkspaceId: workspace.id, workspaces: [workspace] };
   }
 
@@ -180,7 +183,14 @@ const loadInitialWorkspaceStore = (): WorkspaceStore => {
   ) {
     return backupStore;
   }
-  if (savedStore) return savedStore;
+  if (
+    savedStore &&
+    savedStore.workspaces.some(
+      (workspace) => !isEmptyState(workspace.history.present)
+    )
+  ) {
+    return savedStore;
+  }
 
   const legacyState = loadInitialState();
   const workspace = createWorkspace("ワークスペース 1", legacyState);

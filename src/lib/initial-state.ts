@@ -1,4 +1,6 @@
 import { State } from "../reducer/reducer";
+import { normalizeState } from "./StateValidator";
+import defaultWorkspaceTemplateJson from "../../template?raw";
 
 export const getInitialState = (): State => ({
   version: 8,
@@ -11,3 +13,12 @@ export const getInitialState = (): State => ({
   trainRuns: [],
   routeReadDirection: "topToBottom",
 });
+
+export const getDefaultWorkspaceState = (): State => {
+  try {
+    const state = normalizeState(JSON.parse(defaultWorkspaceTemplateJson));
+    return state ?? getInitialState();
+  } catch {
+    return getInitialState();
+  }
+};

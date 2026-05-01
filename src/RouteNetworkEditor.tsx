@@ -28,6 +28,8 @@ import {
 } from "./lib/domain";
 import {
   getRouteTimeSectionBreakpoints,
+  getRouteTimeSectionsForSpeedClass,
+  getRouteTimeSpeedClassCount,
   resolveRouteTimeSectionSegments,
 } from "./lib/route-time";
 import { Actions, State } from "./reducer/reducer";
@@ -2301,6 +2303,8 @@ export const RouteNetworkEditor = ({
     Array<RouteTimeDraft | null>
   >([]);
   const [routeTimeMinutes, setRouteTimeMinutes] = useState(0);
+  const [selectedRouteTimeSpeedClassIndex, setSelectedRouteTimeSpeedClassIndex] =
+    useState(0);
   const [routeTimeMessage, setRouteTimeMessage] = useState("");
   const [isRouteTemplateMode, setIsRouteTemplateMode] = useState(false);
   const [routeTemplatePendingStart, setRouteTemplatePendingStart] =
@@ -2320,6 +2324,18 @@ export const RouteNetworkEditor = ({
 
   const selectedTrainRun = state.trainRuns.find(
     (trainRun) => trainRun.id === selectedTrainRunId
+  );
+  const routeTimeSpeedClassCount = getRouteTimeSpeedClassCount(
+    state.routeTimeSections,
+    state.routeTimeSpeedClassCount
+  );
+  const routeTimeSectionsForSelectedSpeed = useMemo(
+    () =>
+      getRouteTimeSectionsForSpeedClass(
+        state.routeTimeSections,
+        selectedRouteTimeSpeedClassIndex
+      ),
+    [selectedRouteTimeSpeedClassIndex, state.routeTimeSections]
   );
   const selectedRouteTemplate = state.routeTemplates.find(
     (routeTemplate) => routeTemplate.id === selectedRouteTemplateId
@@ -2344,9 +2360,16 @@ export const RouteNetworkEditor = ({
   const selectedNode = state.routeNodes.find(
     (routeNode) => routeNode.id === selectedNodeId
   );
-  const selectedRouteTimeSection = state.routeTimeSections.find(
+  const selectedRouteTimeSection = routeTimeSectionsForSelectedSpeed.find(
     (section) => section.id === selectedRouteTimeSectionId
   );
+
+  useEffect(() => {
+    if (selectedRouteTimeSpeedClassIndex < routeTimeSpeedClassCount) return;
+    setSelectedRouteTimeSpeedClassIndex(
+      Math.max(0, routeTimeSpeedClassCount - 1)
+    );
+  }, [routeTimeSpeedClassCount, selectedRouteTimeSpeedClassIndex]);
 
   useEffect(() => {
     if (
@@ -3452,6 +3475,7 @@ export const RouteNetworkEditor = ({
         routeEdgeIds: routeTimeDraft.routeEdgeIds,
         routePorts: routeTimeDraft.ports,
         travelMinutes: routeTimeMinutes,
+        speedClassIndex: selectedRouteTimeSpeedClassIndex,
       },
     });
     setSelectedRouteTimeSectionId(routeTimeSectionId);
@@ -3467,7 +3491,7 @@ export const RouteNetworkEditor = ({
     value: number
   ) => {
     const resolvedSegments = resolveRouteTimeSectionSegments(
-      state.routeTimeSections,
+      routeTimeSectionsForSelectedSpeed,
       section,
       state.routeNodes
     );
@@ -3499,6 +3523,7 @@ export const RouteNetworkEditor = ({
       type: "updateRouteTimeSection",
       payload: {
         id: section.id,
+        speedClassIndex: selectedRouteTimeSpeedClassIndex,
         segmentMinutes: getRouteTimeSectionStoredSegmentMinutes(
           section,
           displaySegmentMinutesNext
@@ -4316,7 +4341,7 @@ export const RouteNetworkEditor = ({
                 );
               })}
 
-              {state.routeTimeSections.map((section) => {
+              {routeTimeSectionsForSelectedSpeed.map((section) => {
                 const sectionColor = getRouteTimeSectionColor(section);
                 const geometries = section.routeEdgeIds.flatMap(
                   (routeEdgeId) => {
@@ -5549,6 +5574,39 @@ export const RouteNetworkEditor = ({
                 {isRouteTimeMode ? "設定中" : "設定モード"}
               </button>
             </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+              <label className="flex flex-col gap-1 text-xs text-gray-600">
+                車速区分
+                <select
+                  value={selectedRouteTimeSpeedClassIndex}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                    setSelectedRouteTimeSpeedClassIndex(
+                      Math.max(0, Number(event.target.value))
+                    )
+                  }
+                  className="rounded border border-gray-300 bg-white p-2 text-sm text-gray-900"
+                >
+                  {Array.from({ length: routeTimeSpeedClassCount }, (_, index) => (
+                    <option key={index} value={index}>
+                      {index + 1}番設定
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({
+                    type: "addRouteTimeSpeedClass",
+                    payload: { copyFromIndex: selectedRouteTimeSpeedClassIndex },
+                  });
+                  setSelectedRouteTimeSpeedClassIndex(routeTimeSpeedClassCount);
+                }}
+                className="rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700"
+              >
+                追加
+              </button>
+            </div>
             {isRouteTimeMode ? (
               <>
                 <p className="text-xs text-gray-500">
@@ -5617,7 +5675,7 @@ export const RouteNetworkEditor = ({
                   設定済み区間
                 </h4>
                 <div className="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
-                  {state.routeTimeSections.map((section) => (
+                  {routeTimeSectionsForSelectedSpeed.map((section) => (
                     <button
                       key={section.id}
                       type="button"
@@ -5638,8 +5696,8 @@ export const RouteNetworkEditor = ({
                       }}
                       className={`flex items-start gap-2 rounded border px-3 py-2 text-left text-sm ${
                         section.id === selectedRouteTimeSectionId
-                          ? "border-green-700 bg-green-50"
-                          : "border-gray-200 bg-white"
+                          ? "border-blue-700 bg-blue-50 text-blue-950 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-50"
+                          : "border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                       }`}
                     >
                       <span
@@ -5651,7 +5709,7 @@ export const RouteNetworkEditor = ({
                       <span className="min-w-0 flex-1">
                         {getRouteTimeSectionLabel(state, section)}
                       </span>
-                      <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs text-gray-600">
+                      <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-slate-700 dark:text-slate-100">
                         {
                           routeTimeSectionInternalDirectionLabels[
                             section.internalDirection ?? "forward"
@@ -5666,7 +5724,7 @@ export const RouteNetworkEditor = ({
             {selectedRouteTimeSection
               ? (() => {
                   const resolvedSegments = resolveRouteTimeSectionSegments(
-                    state.routeTimeSections,
+                    routeTimeSectionsForSelectedSpeed,
                     selectedRouteTimeSection,
                     state.routeNodes
                   );
@@ -5729,6 +5787,8 @@ export const RouteNetworkEditor = ({
                               type: "updateRouteTimeSection",
                               payload: {
                                 id: selectedRouteTimeSection.id,
+                                speedClassIndex:
+                                  selectedRouteTimeSpeedClassIndex,
                                 travelMinutes: Math.max(
                                   0,
                                   Number(event.target.value)
@@ -5815,6 +5875,8 @@ export const RouteNetworkEditor = ({
                                   type: "updateRouteTimeSection",
                                   payload: {
                                     id: selectedRouteTimeSection.id,
+                                    speedClassIndex:
+                                      selectedRouteTimeSpeedClassIndex,
                                     segmentMinutes: [],
                                   },
                                 })

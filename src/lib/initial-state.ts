@@ -6,6 +6,7 @@ export const getInitialState = (): State => ({
   routeNodes: [],
   routeEdges: [],
   routeTimeSections: [],
+  routeTimeSpeedClassCount: 1,
   routeTemplates: [],
   trainRuns: [],
   routeReadDirection: "topToBottom",

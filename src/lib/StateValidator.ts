@@ -14,6 +14,7 @@ import {
   RouteTimeSection,
   RouteTimeSectionInternalDirection,
   RouteTimeSectionPort,
+  RouteTimeSpeedProfile,
   Station,
   Stop,
   StopStatus,
@@ -41,6 +42,9 @@ const asStringArray = (value: unknown) =>
   Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === "string")
     : [];
+
+const normalizeSpeedClassIndex = (value: unknown) =>
+  Math.max(0, Math.floor(asNumber(value, 0)));
 
 const asRoutePortSide = (value: unknown, fallback: RoutePortSide) =>
   value === "top" || value === "right" || value === "bottom" || value === "left"
@@ -334,6 +338,35 @@ const normalizeRouteTimeSection = (
     segmentCount > 1 && segmentMinutes.length === segmentCount
       ? segmentMinutes
       : [];
+  const legacyProfile: RouteTimeSpeedProfile = {
+    travelMinutes,
+    segmentMinutes: normalizedSegmentMinutes,
+  };
+  const speedProfiles = Array.isArray(value.speedProfiles)
+    ? value.speedProfiles
+        .filter(isObject)
+        .map((profile): RouteTimeSpeedProfile => {
+          const profileTravelMinutes = Math.max(
+            0,
+            Math.floor(asNumber(profile.travelMinutes, travelMinutes))
+          );
+          const profileSegmentMinutes = Array.isArray(profile.segmentMinutes)
+            ? profile.segmentMinutes
+                .map((minutes) => Math.max(0, Math.floor(asNumber(minutes, 0))))
+                .slice(0, segmentCount)
+            : [];
+          return {
+            travelMinutes: profileTravelMinutes,
+            segmentMinutes:
+              segmentCount > 1 && profileSegmentMinutes.length === segmentCount
+                ? profileSegmentMinutes
+                : [],
+          };
+        })
+    : [];
+  const normalizedSpeedProfiles =
+    speedProfiles.length > 0 ? speedProfiles : [legacyProfile];
+  const firstProfile = normalizedSpeedProfiles[0] ?? legacyProfile;
 
   return {
     id: asString(value.id, `rts_${index}`),
@@ -348,8 +381,9 @@ const normalizeRouteTimeSection = (
       routePorts.length >= 2
         ? (routePorts as RouteTimeSectionPort[])
         : [startPort, endPort],
-    travelMinutes,
-    segmentMinutes: normalizedSegmentMinutes,
+    travelMinutes: firstProfile.travelMinutes,
+    segmentMinutes: firstProfile.segmentMinutes,
+    speedProfiles: normalizedSpeedProfiles,
     internalDirection: asRouteTimeSectionInternalDirection(
       value.internalDirection
     ),
@@ -383,11 +417,50 @@ const routeEdgeToRouteTimeSection = (
         ],
         travelMinutes: routeEdge.travelMinutes,
         segmentMinutes: [],
+        speedProfiles: [
+          {
+            travelMinutes: routeEdge.travelMinutes,
+            segmentMinutes: [],
+          },
+        ],
         internalDirection: routeEdge.bidirectional
           ? "bidirectional"
           : "forward",
       }
     : null;
+
+const expandRouteTimeSectionSpeedProfiles = (
+  section: RouteTimeSection,
+  routeTimeSpeedClassCount: number
+): RouteTimeSection => {
+  const normalizedCount = Math.max(1, Math.floor(routeTimeSpeedClassCount));
+  const fallbackProfiles =
+    section.speedProfiles.length > 0
+      ? section.speedProfiles
+      : [
+          {
+            travelMinutes: section.travelMinutes,
+            segmentMinutes: section.segmentMinutes,
+          },
+        ];
+  const speedProfiles = Array.from({ length: normalizedCount }, (_, index) => {
+    const fallback =
+      fallbackProfiles[index] ??
+      fallbackProfiles[fallbackProfiles.length - 1] ??
+      fallbackProfiles[0];
+    return {
+      travelMinutes: fallback.travelMinutes,
+      segmentMinutes: [...fallback.segmentMinutes],
+    };
+  });
+  const firstProfile = speedProfiles[0];
+  return {
+    ...section,
+    travelMinutes: firstProfile.travelMinutes,
+    segmentMinutes: firstProfile.segmentMinutes,
+    speedProfiles,
+  };
+};
 
 const normalizeStop = (
   value: unknown,
@@ -489,7 +562,8 @@ const normalizeTrainRun = (
   index: number,
   routeNodes: RouteNode[],
   routeTimeSections: RouteTimeSection[],
-  routeTemplates: RouteTemplate[]
+  routeTemplates: RouteTemplate[],
+  routeTimeSpeedClassCount: number
 ): TrainRun => {
   if (!isObject(value)) {
     return {
@@ -506,6 +580,7 @@ const normalizeTrainRun = (
       deadheadEndTime: "",
       defaultStopMinutes: 5,
       routeTemplateId: "",
+      speedClassIndex: 0,
       serviceRouteNodeIds: [],
       deadheadRouteNodeIds: [],
       serviceRouteSections: [],
@@ -543,6 +618,10 @@ const normalizeTrainRun = (
     )
       ? asString(value.routeTemplateId)
       : "",
+    speedClassIndex: Math.min(
+      Math.max(0, routeTimeSpeedClassCount - 1),
+      normalizeSpeedClassIndex(value.speedClassIndex)
+    ),
     serviceRouteNodeIds: asStringArray(value.serviceRouteNodeIds).filter(
       (routeNodeId) =>
         routeNodes.some((routeNode) => routeNode.id === routeNodeId)
@@ -672,7 +751,7 @@ export const normalizeState = (value: unknown): State | null => {
         )
         .filter((routeEdge): routeEdge is RouteEdge => routeEdge !== null)
     : [];
-  const routeTimeSections = Array.isArray(value.routeTimeSections)
+  const normalizedRouteTimeSections = Array.isArray(value.routeTimeSections)
     ? value.routeTimeSections
         .map((section, index) =>
           normalizeRouteTimeSection(section, index, routeEdges, routeNodes)
@@ -681,6 +760,16 @@ export const normalizeState = (value: unknown): State | null => {
     : routeEdges
         .map(routeEdgeToRouteTimeSection)
         .filter((section): section is RouteTimeSection => section !== null);
+  const routeTimeSpeedClassCount = Math.max(
+    1,
+    Math.floor(asNumber(value.routeTimeSpeedClassCount, 1)),
+    ...normalizedRouteTimeSections.map(
+      (section) => section.speedProfiles.length
+    )
+  );
+  const routeTimeSections = normalizedRouteTimeSections.map((section) =>
+    expandRouteTimeSectionSpeedProfiles(section, routeTimeSpeedClassCount)
+  );
   const routeTemplates = Array.isArray(value.routeTemplates)
     ? value.routeTemplates
         .map((routeTemplate, index) =>
@@ -698,7 +787,8 @@ export const normalizeState = (value: unknown): State | null => {
           index,
           routeNodes,
           routeTimeSections,
-          routeTemplates
+          routeTemplates,
+          routeTimeSpeedClassCount
         )
       )
     : [];
@@ -709,6 +799,7 @@ export const normalizeState = (value: unknown): State | null => {
     routeNodes,
     routeEdges,
     routeTimeSections,
+    routeTimeSpeedClassCount,
     routeTemplates,
     trainRuns,
     routeReadDirection: asRouteReadDirection(
@@ -787,6 +878,7 @@ const migrateLegacyState = (value: JSONObject): State | null => {
             deadheadEndTime: "",
             defaultStopMinutes: 5,
             routeTemplateId: "",
+            speedClassIndex: 0,
             serviceRouteNodeIds: [],
             deadheadRouteNodeIds: [],
             serviceRouteSections: [],
@@ -807,6 +899,7 @@ const migrateLegacyState = (value: JSONObject): State | null => {
     routeNodes,
     routeEdges: [],
     routeTimeSections: [],
+    routeTimeSpeedClassCount: 1,
     routeTemplates: [],
     trainRuns,
     routeReadDirection: "topToBottom",

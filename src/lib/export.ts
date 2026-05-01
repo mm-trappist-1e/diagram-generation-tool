@@ -107,31 +107,42 @@ export const stateToCsv = (state: State) => {
     "endPortSide",
     "endPortIndex",
     "routeEdgeIds",
+    "speedClass",
     "travelMinutes",
     "segmentMinutes",
   ];
-  const timeSectionRows = state.routeTimeSections.map((section) => {
+  const timeSectionRows = state.routeTimeSections.flatMap((section) => {
     const startNode = state.routeNodes.find(
       (routeNode) => routeNode.id === section.startNodeId
     );
     const endNode = state.routeNodes.find(
       (routeNode) => routeNode.id === section.endNodeId
     );
-    return [
+    const speedProfiles =
+      section.speedProfiles.length > 0
+        ? section.speedProfiles
+        : [
+            {
+              travelMinutes: section.travelMinutes,
+              segmentMinutes: section.segmentMinutes,
+            },
+          ];
+    return speedProfiles.map((profile, index) => [
       "routeTimeSection",
       section.id,
       section.startNodeId,
-      startNode ? getRouteNodeLabel(state.stations, startNode) : "",
-      section.startPortSide,
-      section.startPortIndex + 1,
-      section.endNodeId,
-      endNode ? getRouteNodeLabel(state.stations, endNode) : "",
-      section.endPortSide,
-      section.endPortIndex + 1,
-      section.routeEdgeIds.join(" "),
-      section.travelMinutes,
-      section.segmentMinutes.join(" "),
-    ];
+        startNode ? getRouteNodeLabel(state.stations, startNode) : "",
+        section.startPortSide,
+        section.startPortIndex + 1,
+        section.endNodeId,
+        endNode ? getRouteNodeLabel(state.stations, endNode) : "",
+        section.endPortSide,
+        section.endPortIndex + 1,
+        section.routeEdgeIds.join(" "),
+      index + 1,
+      profile.travelMinutes,
+      profile.segmentMinutes.join(" "),
+    ]);
   });
 
   return [

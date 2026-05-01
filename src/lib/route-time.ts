@@ -329,6 +329,59 @@ export const normalizeRouteTimeSectionSegmentMinutes = (
     getRouteTimeSectionSegmentRefs(section, routeNodes).length
   );
 
+export const getRouteTimeSpeedClassCount = (
+  sections: RouteTimeSection[],
+  fallbackCount = 1
+) => {
+  const normalizedFallbackCount = Number.isFinite(fallbackCount)
+    ? Math.floor(fallbackCount)
+    : 1;
+  return Math.max(
+    1,
+    normalizedFallbackCount,
+    ...sections.map((section) => section.speedProfiles?.length ?? 1)
+  );
+};
+
+export const getRouteTimeSectionSpeedProfile = (
+  section: RouteTimeSection,
+  speedClassIndex: number
+) => {
+  const index = Math.max(0, Math.floor(speedClassIndex));
+  const profile = section.speedProfiles?.[index];
+  return {
+    travelMinutes: Math.max(
+      0,
+      Math.floor(profile?.travelMinutes ?? section.travelMinutes)
+    ),
+    segmentMinutes: Array.isArray(profile?.segmentMinutes)
+      ? profile.segmentMinutes.map((minutes) =>
+          Math.max(0, Math.floor(minutes))
+        )
+      : section.segmentMinutes,
+  };
+};
+
+export const getRouteTimeSectionForSpeedClass = (
+  section: RouteTimeSection,
+  speedClassIndex: number
+): RouteTimeSection => {
+  const profile = getRouteTimeSectionSpeedProfile(section, speedClassIndex);
+  return {
+    ...section,
+    travelMinutes: profile.travelMinutes,
+    segmentMinutes: profile.segmentMinutes,
+  };
+};
+
+export const getRouteTimeSectionsForSpeedClass = (
+  sections: RouteTimeSection[],
+  speedClassIndex: number
+) =>
+  sections.map((section) =>
+    getRouteTimeSectionForSpeedClass(section, speedClassIndex)
+  );
+
 export const getRouteTimeSectionBreakpoints = (segmentMinutes: number[]) => {
   let total = 0;
   return segmentMinutes.slice(0, -1).map((minutes) => {

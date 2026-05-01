@@ -30,6 +30,7 @@ import {
   trainRunTypeLabels,
   TrainRunType,
 } from "./lib/domain";
+import { getRouteTimeSpeedClassCount } from "./lib/route-time";
 import { Actions, State } from "./reducer/reducer";
 import { TextInput } from "./TextInput";
 
@@ -680,6 +681,10 @@ export const TrainOperationSection = ({
     () =>
       state.trainRuns.find((trainRun) => trainRun.id === selectedTrainRunId),
     [selectedTrainRunId, state.trainRuns]
+  );
+  const routeTimeSpeedClassCount = getRouteTimeSpeedClassCount(
+    state.routeTimeSections,
+    state.routeTimeSpeedClassCount
   );
   const selectedTrainRouteTemplate = useMemo<RouteTemplate | undefined>(
     () =>
@@ -1717,7 +1722,7 @@ export const TrainOperationSection = ({
                   </div>
                 </div>
 
-                <div className="grid gap-3 rounded border border-slate-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <div className="grid gap-3 rounded border border-slate-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_160px_minmax(0,2fr)]">
                   <label className="flex flex-col gap-1 text-sm">
                     適用する経路セット
                     <select
@@ -1739,6 +1744,34 @@ export const TrainOperationSection = ({
                           {routeTemplate.name}
                         </option>
                       ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    車速区分
+                    <select
+                      value={Math.min(
+                        routeTimeSpeedClassCount - 1,
+                        Math.max(0, selectedTrainRun.speedClassIndex ?? 0)
+                      )}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        dispatch({
+                          type: "updateTrainRun",
+                          payload: {
+                            id: selectedTrainRun.id,
+                            speedClassIndex: Number(event.target.value),
+                          },
+                        })
+                      }
+                      className="rounded border border-gray-300 p-2"
+                    >
+                      {Array.from(
+                        { length: routeTimeSpeedClassCount },
+                        (_, index) => (
+                          <option key={index} value={index}>
+                            {index + 1}番設定
+                          </option>
+                        )
+                      )}
                     </select>
                   </label>
                   <div className="flex flex-col justify-end gap-1 text-sm text-gray-600">

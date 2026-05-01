@@ -81,6 +81,11 @@ export type RouteTimeSectionInternalDirection =
   | "reverse"
   | "bidirectional";
 
+export type RouteTimeSpeedProfile = {
+  travelMinutes: number;
+  segmentMinutes: number[];
+};
+
 export type RouteTimeSection = {
   id: string;
   startNodeId: string;
@@ -93,6 +98,7 @@ export type RouteTimeSection = {
   routePorts: RouteTimeSectionPort[];
   travelMinutes: number;
   segmentMinutes: number[];
+  speedProfiles: RouteTimeSpeedProfile[];
   internalDirection: RouteTimeSectionInternalDirection;
 };
 
@@ -141,6 +147,7 @@ export type TrainRun = {
   deadheadEndTime: string;
   defaultStopMinutes: number;
   routeTemplateId: string;
+  speedClassIndex: number;
   serviceRouteNodeIds: string[];
   deadheadRouteNodeIds: string[];
   serviceRouteSections: TrainRunRouteSection[];

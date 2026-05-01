@@ -107,6 +107,18 @@ type RouteEdgeGeometry = {
   routePoints: Point[];
   labelPoint: Point;
 };
+type RoutePathSegment = {
+  from: Point;
+  to: Point;
+  length: number;
+  sectionId?: string;
+};
+type RouteTimeLabelPlacement = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 type LayoutInfo = {
   labelX: number;
@@ -189,15 +201,7 @@ const normalizeRotation = (rotation = 0, allowFourDirections = false) => {
 };
 
 const getNodeRotation = (routeNode: RouteNode) =>
-  normalizeRotation(
-    routeNode.rotation,
-    routeNode.type === "terminal" ||
-      routeNode.type === "turnback" ||
-      (routeNode.type === "connection" &&
-        (routeNode.connectionType === "turnout" ||
-          routeNode.connectionType === "passing12" ||
-          routeNode.connectionType === "passing21"))
-  );
+  normalizeRotation(routeNode.rotation, true);
 
 const getEdgeStrokeColor = (routeEdgeId: string, selectedEdgeId: string) =>
   routeEdgeId === selectedEdgeId ? "#dc2626" : "#64748b";
@@ -492,6 +496,47 @@ const rotatePortSideByDegrees = (
   const index = sides.indexOf(side);
   const steps = Math.round(degrees / 90);
   return sides[(index + steps + sides.length * 4) % sides.length];
+};
+
+const getPortIndexAxis = (side: RoutePortSide): Point =>
+  side === "top" || side === "bottom" ? { x: 1, y: 0 } : { x: 0, y: 1 };
+
+const rotateAxisByDegrees = (axis: Point, degrees: number): Point => {
+  const steps = ((Math.round(degrees / 90) % 4) + 4) % 4;
+  if (steps === 1) return { x: -axis.y, y: axis.x };
+  if (steps === 2) return { x: -axis.x, y: -axis.y };
+  if (steps === 3) return { x: axis.y, y: -axis.x };
+  return axis;
+};
+
+const shouldReverseRotatedPortIndex = (
+  routeNode: RouteNode,
+  side: RoutePortSide
+) => {
+  if (routeNode.type === "connection" || routeNode.type === "crossing") {
+    return false;
+  }
+  const rotation = getNodeRotation(routeNode);
+  if (rotation === 0) return false;
+  const canonicalSide = rotatePortSideByDegrees(side, -rotation);
+  const rotatedAxis = rotateAxisByDegrees(
+    getPortIndexAxis(canonicalSide),
+    rotation
+  );
+  const currentAxis = getPortIndexAxis(side);
+  return rotatedAxis.x * currentAxis.x + rotatedAxis.y * currentAxis.y < 0;
+};
+
+const getVisualPortIndex = (
+  routeNode: RouteNode,
+  side: RoutePortSide,
+  index: number
+) => {
+  const count = getPortCountForSide(routeNode, side);
+  const clampedIndex = Math.max(0, Math.min(count - 1, index));
+  return shouldReverseRotatedPortIndex(routeNode, side)
+    ? count - 1 - clampedIndex
+    : clampedIndex;
 };
 
 const getActualConnectionSide = (
@@ -869,9 +914,13 @@ const getRouteTemplatePlatformRegions = (routeNode: RouteNode) => {
   const width = getNodeWidth(routeNode);
   const height = getNodeHeight(routeNode);
   const isColumnSplit = isVerticalNode(routeNode);
+  const reverseOrder =
+    routeNode.type !== "crossing" &&
+    (getNodeRotation(routeNode) === 90 || getNodeRotation(routeNode) === 180);
   return Array.from({ length: count }).map((_, index) => {
-    const x = isColumnSplit ? (width / count) * index : 0;
-    const y = isColumnSplit ? 0 : (height / count) * index;
+    const displayIndex = reverseOrder ? count - 1 - index : index;
+    const x = isColumnSplit ? (width / count) * displayIndex : 0;
+    const y = isColumnSplit ? 0 : (height / count) * displayIndex;
     return {
       platform: { nodeId: routeNode.id, index },
       label: getPlatformLabel(routeNode, index),
@@ -1197,7 +1246,8 @@ const getPortPosition = (
   }
   const count = getPortCountForSide(routeNode, side);
   const clampedIndex = Math.max(0, Math.min(count - 1, index));
-  const offset = (clampedIndex - (count - 1) / 2) * portGap;
+  const displayIndex = getVisualPortIndex(routeNode, side, clampedIndex);
+  const offset = (displayIndex - (count - 1) / 2) * portGap;
   const centerX = routeNode.x + width / 2;
   const centerY = routeNode.y + height / 2;
 
@@ -1444,17 +1494,53 @@ const getIndexedSideLane = (
   const laneStep = layoutGridSize;
   const baseLane = getSideLane(rect, side, offset);
   const direction = side === "left" || side === "top" ? -1 : 1;
+  const visualIndex = getVisualPortIndex(routeNode, side, index);
   let rank = 0;
 
   if (count > 1) {
     if (side === "left" || side === "right") {
-      rank = towardPoint.y >= port.y ? count - 1 - index : index;
+      rank = towardPoint.y >= port.y ? count - 1 - visualIndex : visualIndex;
     } else {
-      rank = towardPoint.x >= port.x ? count - 1 - index : index;
+      rank = towardPoint.x >= port.x ? count - 1 - visualIndex : visualIndex;
     }
   }
 
   return baseLane + direction * rank * laneStep;
+};
+
+const getSharedSameSideLane = (
+  fromNode: RouteNode,
+  toNode: RouteNode,
+  side: RoutePortSide,
+  fromPortIndex: number,
+  toPortIndex: number,
+  offset = routeClearance + routeStubLength
+) => {
+  const fromRect = getNodeRect(fromNode);
+  const toRect = getNodeRect(toNode);
+  const fromPort = getPortPosition(fromNode, side, fromPortIndex);
+  const toPort = getPortPosition(toNode, side, toPortIndex);
+  const direction = side === "left" || side === "top" ? -1 : 1;
+  const fromBaseLane = getSideLane(fromRect, side, offset);
+  const toBaseLane = getSideLane(toRect, side, offset);
+  const baseLane =
+    direction > 0
+      ? Math.max(fromBaseLane, toBaseLane)
+      : Math.min(fromBaseLane, toBaseLane);
+  const anchorVisualIndex =
+    side === "left" || side === "right"
+      ? fromPort.y <= toPort.y
+        ? getVisualPortIndex(fromNode, side, fromPortIndex)
+        : getVisualPortIndex(toNode, side, toPortIndex)
+      : fromPort.x <= toPort.x
+      ? getVisualPortIndex(fromNode, side, fromPortIndex)
+      : getVisualPortIndex(toNode, side, toPortIndex);
+  const count = Math.max(
+    getPortCountForSide(fromNode, side),
+    getPortCountForSide(toNode, side)
+  );
+  const rank = Math.max(0, Math.min(count - 1, count - 1 - anchorVisualIndex));
+  return baseLane + direction * rank * layoutGridSize;
 };
 
 const getLanePoint = (point: Point, side: RoutePortSide, lane: number): Point =>
@@ -1844,55 +1930,175 @@ const estimateTextWidth = (text: string, fontSize: number) =>
     0
   );
 
-const getRouteTimeLabelPlacement = (
+const getRoutePathSegments = (
   geometries: RouteEdgeGeometry[],
-  text: string,
-  sectionKey: string,
-  laneIndex: number,
-  laneOffset: number
-) => {
-  const segments = geometries.flatMap((geometry) => {
+  sectionId?: string
+): RoutePathSegment[] =>
+  geometries.flatMap((geometry) => {
     const points = compactPoints(geometry.routePoints);
     return points.flatMap((from, index) => {
       const to = points[index + 1];
       if (!to) return [];
       const length = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-      return length > 0 ? [{ from, to, length }] : [];
+      return length > 0 ? [{ from, to, length, sectionId }] : [];
     });
   });
-  const segment =
-    segments.length > 0
-      ? segments.reduce((best, current) =>
-          current.length > best.length ? current : best
-        )
-      : null;
+
+const getRouteTimeLabelRect = (
+  placement: RouteTimeLabelPlacement,
+  padding = 0
+): ObstacleRect => ({
+  id: "route-time-label",
+  x: placement.x - placement.width / 2 - padding,
+  y: placement.y - placement.height / 2 - padding,
+  width: placement.width + padding * 2,
+  height: placement.height + padding * 2,
+});
+
+const getParallelSegmentOverlapLength = (
+  a: RoutePathSegment,
+  b: RoutePathSegment,
+  tolerance = 4
+) => {
+  const aHorizontal = a.from.y === a.to.y;
+  const bHorizontal = b.from.y === b.to.y;
+  const aVertical = a.from.x === a.to.x;
+  const bVertical = b.from.x === b.to.x;
+
+  if (aHorizontal && bHorizontal && Math.abs(a.from.y - b.from.y) <= tolerance) {
+    const minA = Math.min(a.from.x, a.to.x);
+    const maxA = Math.max(a.from.x, a.to.x);
+    const minB = Math.min(b.from.x, b.to.x);
+    const maxB = Math.max(b.from.x, b.to.x);
+    return Math.max(0, Math.min(maxA, maxB) - Math.max(minA, minB));
+  }
+
+  if (aVertical && bVertical && Math.abs(a.from.x - b.from.x) <= tolerance) {
+    const minA = Math.min(a.from.y, a.to.y);
+    const maxA = Math.max(a.from.y, a.to.y);
+    const minB = Math.min(b.from.y, b.to.y);
+    const maxB = Math.max(b.from.y, b.to.y);
+    return Math.max(0, Math.min(maxA, maxB) - Math.max(minA, minB));
+  }
+
+  return 0;
+};
+
+const getSharedSectionCountForSegment = (
+  segment: RoutePathSegment,
+  sectionId: string,
+  allSegments: RoutePathSegment[]
+) => {
+  const sharedSectionIds = new Set<string>();
+  allSegments.forEach((otherSegment) => {
+    if (!otherSegment.sectionId || otherSegment.sectionId === sectionId) {
+      return;
+    }
+    if (getParallelSegmentOverlapLength(segment, otherSegment) >= 8) {
+      sharedSectionIds.add(otherSegment.sectionId);
+    }
+  });
+  return sharedSectionIds.size;
+};
+
+const getRouteTimeLabelPlacement = (
+  geometries: RouteEdgeGeometry[],
+  text: string,
+  sectionKey: string,
+  laneIndex: number,
+  laneOffset: number,
+  sectionId: string,
+  allRouteTimeSegments: RoutePathSegment[],
+  nodeObstacles: ObstacleRect[],
+  placedLabelRects: ObstacleRect[]
+) => {
+  const segments = getRoutePathSegments(geometries, sectionId);
   const width = Math.max(42, estimateTextWidth(text, 13) + 14);
   const height = 22;
-  if (!segment) return null;
-
-  const dx = segment.to.x - segment.from.x;
-  const dy = segment.to.y - segment.from.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const normal = { x: -dy / length, y: dx / length };
-  let baseDirection = hashString(sectionKey) % 2 === 0 ? 1 : -1;
   const laneDirection = laneIndex % 2 === 0 ? -1 : 1;
-  if (Math.abs(dx) >= Math.abs(dy) && Math.abs(normal.y) > 0.01) {
-    baseDirection = laneDirection * (normal.y >= 0 ? 1 : -1);
-  } else if (Math.abs(normal.x) > 0.01) {
-    baseDirection = laneDirection * (normal.x >= 0 ? 1 : -1);
-  }
-  const rawOffset = baseDirection * 34 + laneOffset;
-  const offset =
-    Math.abs(rawOffset) < 26 ? (rawOffset < 0 ? -26 : 26) : rawOffset;
-  const centerX = (segment.from.x + segment.to.x) / 2 + normal.x * offset;
-  const centerY = (segment.from.y + segment.to.y) / 2 + normal.y * offset;
+  const baseHashDirection = hashString(sectionKey) % 2 === 0 ? 1 : -1;
+  const candidates = segments.flatMap((segment, segmentIndex) => {
+    const dx = segment.to.x - segment.from.x;
+    const dy = segment.to.y - segment.from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const normal = { x: -dy / length, y: dx / length };
+    const ratios = segment.length >= 180 ? [0.32, 0.5, 0.68] : [0.5];
+    let preferredDirection = baseHashDirection;
+    if (Math.abs(dx) >= Math.abs(dy) && Math.abs(normal.y) > 0.01) {
+      preferredDirection = laneDirection * (normal.y >= 0 ? 1 : -1);
+    } else if (Math.abs(normal.x) > 0.01) {
+      preferredDirection = laneDirection * (normal.x >= 0 ? 1 : -1);
+    }
+    const offsets = [
+      preferredDirection * 34 + laneOffset,
+      -preferredDirection * 34 + laneOffset,
+      preferredDirection * 54 + laneOffset,
+      -preferredDirection * 54 + laneOffset,
+    ].map((offset) =>
+      Math.abs(offset) < 26 ? (offset < 0 ? -26 : 26) : offset
+    );
 
-  return {
-    x: centerX,
-    y: centerY,
-    width,
-    height,
-  };
+    return ratios.flatMap((ratio, ratioIndex) =>
+      offsets.map((offset, offsetIndex) => ({
+        placement: {
+          x: segment.from.x + dx * ratio + normal.x * offset,
+          y: segment.from.y + dy * ratio + normal.y * offset,
+          width,
+          height,
+        },
+        segment,
+        segmentIndex,
+        ratioIndex,
+        offsetIndex,
+      }))
+    );
+  });
+
+  if (candidates.length === 0) return null;
+
+  const scoredCandidates = candidates.map((candidate) => {
+    const labelRect = getRouteTimeLabelRect(candidate.placement, 3);
+    const sharedSectionCount = getSharedSectionCountForSegment(
+      candidate.segment,
+      sectionId,
+      allRouteTimeSegments
+    );
+    const labelCollisions = placedLabelRects.reduce(
+      (count, rect) => count + (rectsIntersect(labelRect, rect) ? 1 : 0),
+      0
+    );
+    const nodeCollisions = nodeObstacles.reduce(
+      (count, rect) => count + (rectsIntersect(labelRect, rect) ? 1 : 0),
+      0
+    );
+    const routeLineCollisions = allRouteTimeSegments.reduce(
+      (count, segment) =>
+        count + (segmentIntersectsRect(segment.from, segment.to, labelRect) ? 1 : 0),
+      0
+    );
+    const outOfBounds =
+      labelRect.x < 0 ||
+      labelRect.y < 0 ||
+      labelRect.x + labelRect.width > canvasWidth ||
+      labelRect.y + labelRect.height > canvasHeight
+        ? 1
+        : 0;
+    const score =
+      sharedSectionCount * 1_000_000 +
+      labelCollisions * 250_000 +
+      nodeCollisions * 150_000 +
+      outOfBounds * 120_000 +
+      routeLineCollisions * 1_500 +
+      candidate.offsetIndex * 120 +
+      candidate.ratioIndex * 20 +
+      candidate.segmentIndex -
+      candidate.segment.length;
+    return { ...candidate, score };
+  });
+
+  return scoredCandidates.reduce((best, candidate) =>
+    candidate.score < best.score ? candidate : best
+  ).placement;
 };
 
 const getBendCount = (points: Point[]) => {
@@ -1967,6 +2173,10 @@ const buildAutoRoutePoints = (
   const start = moveFromSide(from, fromSide, getRouteStubLength(fromNode));
   const end = moveFromSide(to, toSide, getRouteStubLength(toNode));
   const nodeObstacles = routeNodes.flatMap(getNodeObstacleRects);
+  const requiresIndexedLanes =
+    fromSide === toSide &&
+    (getPortCountForSide(fromNode, fromSide) > 1 ||
+      getPortCountForSide(toNode, toSide) > 1);
   const simpleClearRoute = getSimpleClearRoute(
     from,
     start,
@@ -1977,10 +2187,24 @@ const buildAutoRoutePoints = (
     toNode.id
   );
 
-  if (simpleClearRoute) return simpleClearRoute;
+  if (simpleClearRoute && !requiresIndexedLanes) return simpleClearRoute;
 
-  const fromLane = getIndexedSideLane(fromNode, fromSide, fromPortIndex, to);
-  const toLane = getIndexedSideLane(toNode, toSide, toPortIndex, from);
+  const sharedSameSideLane =
+    requiresIndexedLanes && fromSide === toSide
+      ? getSharedSameSideLane(
+          fromNode,
+          toNode,
+          fromSide,
+          fromPortIndex,
+          toPortIndex
+        )
+      : null;
+  const fromLane =
+    sharedSameSideLane ??
+    getIndexedSideLane(fromNode, fromSide, fromPortIndex, to);
+  const toLane =
+    sharedSameSideLane ??
+    getIndexedSideLane(toNode, toSide, toPortIndex, from);
   const laneStart = getLanePoint(start, fromSide, fromLane);
   const laneEnd = getLanePoint(end, toSide, toLane);
   const fromRect = getNodeRect(fromNode);
@@ -2651,39 +2875,48 @@ export const RouteNetworkEditor = ({
     });
     return map;
   }, [selectedTrainRun]);
-  const routeTimeSectionLabelOffsetById = useMemo(() => {
-    const groups = new Map<string, string[]>();
-    state.routeTimeSections.forEach((section) => {
-      const geometries = section.routeEdgeIds.flatMap((routeEdgeId) => {
-        const geometry = routeEdgeGeometryById.get(routeEdgeId);
-        return geometry ? [geometry] : [];
-      });
-      if (geometries.length === 0) return;
-      const labelPoint = {
-        x:
-          geometries.reduce(
-            (total, geometry) => total + geometry.labelPoint.x,
-            0
-          ) / geometries.length,
-        y:
-          geometries.reduce(
-            (total, geometry) => total + geometry.labelPoint.y,
-            0
-          ) / geometries.length,
-      };
-      const key = `${Math.round(labelPoint.x / 72)}:${Math.round(
-        labelPoint.y / 24
-      )}`;
-      groups.set(key, [...(groups.get(key) ?? []), section.id]);
+  const routeTimeLabelPlacementById = useMemo(() => {
+    const sectionGeometriesById = new Map<string, RouteEdgeGeometry[]>();
+    routeTimeSectionsForSelectedSpeed.forEach((section) => {
+      sectionGeometriesById.set(
+        section.id,
+        section.routeEdgeIds.flatMap((routeEdgeId) => {
+          const geometry = routeEdgeGeometryById.get(routeEdgeId);
+          return geometry ? [geometry] : [];
+        })
+      );
     });
-    const offsetById = new Map<string, number>();
-    groups.forEach((sectionIds) => {
-      sectionIds.forEach((sectionId, index) => {
-        offsetById.set(sectionId, (index - (sectionIds.length - 1) / 2) * 16);
+    const allRouteTimeSegments = routeTimeSectionsForSelectedSpeed.flatMap(
+      (section) =>
+        getRoutePathSegments(sectionGeometriesById.get(section.id) ?? [], section.id)
+    );
+    const nodeObstacles = state.routeNodes.flatMap(getNodeObstacleRects);
+    const placedLabelRects: ObstacleRect[] = [];
+    const placementById = new Map<string, RouteTimeLabelPlacement>();
+
+    routeTimeSectionsForSelectedSpeed.forEach((section) => {
+      if (section.travelMinutes <= 0) return;
+      const placement = getRouteTimeLabelPlacement(
+        sectionGeometriesById.get(section.id) ?? [],
+        `${section.travelMinutes}分`,
+        getRouteTimeSectionNodePairKey(section),
+        section.startPortIndex,
+        0,
+        section.id,
+        allRouteTimeSegments,
+        nodeObstacles,
+        placedLabelRects
+      );
+      if (!placement) return;
+      placementById.set(section.id, placement);
+      placedLabelRects.push({
+        ...getRouteTimeLabelRect(placement, 6),
+        id: `route-time-label:${section.id}`,
       });
     });
-    return offsetById;
-  }, [routeEdgeGeometryById, state.routeTimeSections]);
+
+    return placementById;
+  }, [routeEdgeGeometryById, routeTimeSectionsForSelectedSpeed, state.routeNodes]);
   const activeSelectedNodeIds =
     selectedNodeIds.size > 0
       ? [...selectedNodeIds]
@@ -4353,13 +4586,7 @@ export const RouteNetworkEditor = ({
                 const labelText = `${section.travelMinutes}分`;
                 const labelPlacement =
                   section.travelMinutes > 0
-                    ? getRouteTimeLabelPlacement(
-                        geometries,
-                        labelText,
-                        getRouteTimeSectionNodePairKey(section),
-                        section.startPortIndex,
-                        routeTimeSectionLabelOffsetById.get(section.id) ?? 0
-                      )
+                    ? routeTimeLabelPlacementById.get(section.id) ?? null
                     : null;
                 return (
                   <g key={section.id}>

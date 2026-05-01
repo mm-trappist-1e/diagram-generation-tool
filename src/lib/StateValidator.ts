@@ -146,18 +146,10 @@ const asConnectionType = (value: unknown): ConnectionType => {
     : "passing12";
 };
 
-const allowsFourDirectionConnection = (connectionType: ConnectionType) =>
-  connectionType === "turnout" ||
-  connectionType === "passing12" ||
-  connectionType === "passing21";
-
 const allowsFourDirectionNode = (
-  nodeType: RouteNodeType,
-  connectionType: ConnectionType
-) =>
-  nodeType === "terminal" ||
-  nodeType === "turnback" ||
-  (nodeType === "connection" && allowsFourDirectionConnection(connectionType));
+  _nodeType: RouteNodeType,
+  _connectionType: ConnectionType
+) => true;
 
 const asRouteEdgeType = (value: unknown): RouteEdgeType =>
   routeEdgeTypes.includes(value as RouteEdgeType)

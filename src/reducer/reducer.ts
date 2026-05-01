@@ -1567,19 +1567,10 @@ const normalizeNodeRotation = (rotation = 0, allowFourDirections = false) => {
   return allowFourDirections ? normalized : normalized % 180;
 };
 
-const allowsFourDirectionConnection = (connectionType?: ConnectionType) =>
-  connectionType === undefined ||
-  connectionType === "turnout" ||
-  connectionType === "passing12" ||
-  connectionType === "passing21";
-
 const allowsFourDirectionNode = (
-  nodeType: RouteNodeType,
-  connectionType?: ConnectionType
-) =>
-  nodeType === "terminal" ||
-  nodeType === "turnback" ||
-  (nodeType === "connection" && allowsFourDirectionConnection(connectionType));
+  _nodeType: RouteNodeType,
+  _connectionType?: ConnectionType
+) => true;
 
 const remapConnectionPortIndexForType = (
   routeNode: RouteNode,
@@ -1847,17 +1838,39 @@ export const reducer = (prevState: State, action: Actions): State => {
         allowsFourDirectionNode(rotatedNode.type, rotatedNode.connectionType)
       );
       const portRotationDelta = (nextRotation - previousRotation + 360) % 360;
+      const rotateRouteNodePort = <T extends RouteTimeSectionPort>(
+        port: T
+      ): T =>
+        port.nodeId === action.payload.id
+          ? {
+              ...port,
+              side: rotatePortSide(port.side, portRotationDelta),
+            }
+          : port;
+      const routeNodes = prevState.routeNodes.map((routeNode) =>
+        routeNode.id === action.payload.id
+          ? {
+              ...routeNode,
+              rotation: nextRotation,
+            }
+          : routeNode
+      );
+      const routeTimeSections = prevState.routeTimeSections.map((section) => ({
+        ...section,
+        startPortSide:
+          section.startNodeId === action.payload.id
+            ? rotatePortSide(section.startPortSide, portRotationDelta)
+            : section.startPortSide,
+        endPortSide:
+          section.endNodeId === action.payload.id
+            ? rotatePortSide(section.endPortSide, portRotationDelta)
+            : section.endPortSide,
+        routePorts: section.routePorts.map(rotateRouteNodePort),
+      }));
 
       return {
         ...prevState,
-        routeNodes: prevState.routeNodes.map((routeNode) =>
-          routeNode.id === action.payload.id
-            ? {
-                ...routeNode,
-                rotation: nextRotation,
-              }
-            : routeNode
-        ),
+        routeNodes,
         routeEdges: prevState.routeEdges.map((routeEdge) => ({
           ...routeEdge,
           fromPortSide:
@@ -1869,6 +1882,15 @@ export const reducer = (prevState: State, action: Actions): State => {
               ? rotatePortSide(routeEdge.toPortSide, portRotationDelta)
               : routeEdge.toPortSide,
         })),
+        routeTimeSections,
+        trainRuns: prevState.trainRuns.map((trainRun) =>
+          withAutoStops(
+            trainRun,
+            routeTimeSections,
+            routeNodes,
+            prevState.routeTemplates
+          )
+        ),
       };
     }
 

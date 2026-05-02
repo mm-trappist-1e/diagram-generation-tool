@@ -13,6 +13,7 @@ export const StationMasterPanel = ({ state, dispatch }: Props) => (
       <h2 className="text-xl font-bold text-gray-800">Station</h2>
       <TextInput
         placeholder="駅名を追加"
+        addButtonLabel="追加"
         onEnterPress={(name) =>
           dispatch({ type: "addStation", payload: { name } })
         }

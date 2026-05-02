@@ -10,6 +10,7 @@ import {
   RoutePortSide,
   RouteReadDirection,
   RouteTemplate,
+  RouteTimeSpeedClass,
   RouteTimeSection,
   RouteTimeSectionInternalDirection,
   RouteTimeSectionPort,
@@ -38,6 +39,8 @@ export type State = {
   routeEdges: RouteEdge[];
   routeTimeSections: RouteTimeSection[];
   routeTimeSpeedClassCount: number;
+  routeTimeSpeedClasses: RouteTimeSpeedClass[];
+  routeTimeSpeedMultiplierEnabled: boolean;
   routeTemplates: RouteTemplate[];
   trainRuns: TrainRun[];
   routeReadDirection: RouteReadDirection;
@@ -57,6 +60,10 @@ type CoreAction =
         x: number;
         y: number;
         rotation?: number;
+        isFlipped?: boolean;
+        isTerminal?: boolean;
+        isHorizontalTerminal?: boolean;
+        isVerticalTerminal?: boolean;
         platformNumber: string;
         platformCount: number;
         verticalPlatformCount?: number;
@@ -74,6 +81,10 @@ type CoreAction =
         x?: number;
         y?: number;
         rotation?: number;
+        isFlipped?: boolean;
+        isTerminal?: boolean;
+        isHorizontalTerminal?: boolean;
+        isVerticalTerminal?: boolean;
         platformNumber?: string;
         platformCount?: number;
         platformLabels?: string[];
@@ -84,6 +95,7 @@ type CoreAction =
       };
     }
   | { type: "rotateRouteNode"; payload: { id: string; delta: 90 | -90 } }
+  | { type: "flipRouteNode"; payload: { id: string } }
   | { type: "removeRouteNode"; payload: { id: string } }
   | {
       type: "addRouteEdge";
@@ -180,6 +192,15 @@ type CoreAction =
       type: "addRouteTimeSpeedClass";
       payload?: { copyFromIndex?: number };
     }
+  | {
+      type: "updateRouteTimeSpeedClass";
+      payload: { index: number; baseIndex?: number; multiplier?: number };
+    }
+  | {
+      type: "setRouteTimeSpeedMultiplierEnabled";
+      payload: { enabled: boolean };
+    }
+  | { type: "removeRouteTimeSpeedClass"; payload: { index: number } }
   | { type: "removeRouteTimeSection"; payload: { id: string } }
   | {
       type: "updateRouteReadDirection";
@@ -1293,10 +1314,31 @@ const splitMinutes = (minutes: number, splitRatio: number) => {
 const getNormalizedSpeedClassIndex = (value: number | undefined) =>
   Math.max(0, Math.floor(value ?? 0));
 
+const normalizeSpeedClassMultiplier = (value: number | undefined) => {
+  const multiplier = Number.isFinite(value) ? Number(value) : 1;
+  return Math.max(0.05, Math.min(20, multiplier));
+};
+
+const normalizeRouteTimeSpeedClasses = (
+  speedClasses: RouteTimeSpeedClass[] | undefined,
+  count: number
+): RouteTimeSpeedClass[] => {
+  const normalizedCount = Math.max(1, Math.floor(count));
+  return Array.from({ length: normalizedCount }, (_, index) => ({
+    baseIndex: 0,
+    multiplier: normalizeSpeedClassMultiplier(
+      speedClasses?.[index]?.multiplier
+    ),
+  }));
+};
+
 const getStateRouteTimeSpeedClassCount = (state: State) =>
-  getRouteTimeSpeedClassCount(
-    state.routeTimeSections,
-    state.routeTimeSpeedClassCount
+  Math.max(
+    state.routeTimeSpeedClasses?.length ?? 0,
+    getRouteTimeSpeedClassCount(
+      state.routeTimeSections,
+      state.routeTimeSpeedClassCount
+    )
   );
 
 const normalizeRouteTimeSectionSpeedProfiles = (
@@ -1357,21 +1399,23 @@ const updateRouteTimeSectionSpeedProfile = (
   );
   const segmentCount =
     getRouteTimeSectionBreakGroups(normalizedSection, routeNodes).length + 1;
-  const speedProfiles = normalizedSection.speedProfiles.map((profile, index) => {
-    if (index !== speedClassIndex) return profile;
-    const travelMinutes = Math.max(
-      0,
-      Math.floor(patch.travelMinutes ?? profile.travelMinutes)
-    );
-    return {
-      travelMinutes,
-      segmentMinutes: normalizeRouteTimeSectionSegmentMinutesForTotal(
+  const speedProfiles = normalizedSection.speedProfiles.map(
+    (profile, index) => {
+      if (index !== speedClassIndex) return profile;
+      const travelMinutes = Math.max(
+        0,
+        Math.floor(patch.travelMinutes ?? profile.travelMinutes)
+      );
+      return {
         travelMinutes,
-        patch.segmentMinutes ?? profile.segmentMinutes,
-        segmentCount
-      ),
-    };
-  });
+        segmentMinutes: normalizeRouteTimeSectionSegmentMinutesForTotal(
+          travelMinutes,
+          patch.segmentMinutes ?? profile.segmentMinutes,
+          segmentCount
+        ),
+      };
+    }
+  );
   const firstProfile = speedProfiles[0];
   return {
     ...normalizedSection,
@@ -1379,6 +1423,99 @@ const updateRouteTimeSectionSpeedProfile = (
     segmentMinutes: firstProfile.segmentMinutes,
     speedProfiles,
   };
+};
+
+const removeRouteTimeSectionSpeedProfile = (
+  section: RouteTimeSection,
+  routeNodes: RouteNode[],
+  speedClassCount: number,
+  speedClassIndex: number
+) => {
+  const normalizedSection = normalizeRouteTimeSectionSpeedProfiles(
+    section,
+    routeNodes,
+    speedClassCount
+  );
+  const fallbackProfile = normalizedSection.speedProfiles[0] ?? {
+    travelMinutes: normalizedSection.travelMinutes,
+    segmentMinutes: normalizedSection.segmentMinutes,
+  };
+  const speedProfiles =
+    normalizedSection.speedProfiles.length <= 1
+      ? [fallbackProfile]
+      : normalizedSection.speedProfiles.filter(
+          (_, index) => index !== speedClassIndex
+        );
+  const firstProfile = speedProfiles[0];
+  return {
+    ...normalizedSection,
+    travelMinutes: firstProfile.travelMinutes,
+    segmentMinutes: firstProfile.segmentMinutes,
+    speedProfiles,
+  };
+};
+
+const getScaledSpeedProfileFromBase = (
+  section: RouteTimeSection,
+  routeNodes: RouteNode[],
+  baseProfile: { travelMinutes: number; segmentMinutes: number[] },
+  multiplier: number
+) => {
+  const normalizedMultiplier = normalizeSpeedClassMultiplier(multiplier);
+  const segmentCount =
+    getRouteTimeSectionBreakGroups(section, routeNodes).length + 1;
+  const travelMinutes = Math.max(
+    0,
+    Math.round(baseProfile.travelMinutes * normalizedMultiplier)
+  );
+  return {
+    travelMinutes,
+    segmentMinutes: normalizeRouteTimeSectionSegmentMinutesForTotal(
+      travelMinutes,
+      baseProfile.segmentMinutes.map((minutes) =>
+        Math.max(0, Math.round(minutes * normalizedMultiplier))
+      ),
+      segmentCount
+    ),
+  };
+};
+
+const applySpeedClassMultipliersToRouteTimeSections = (
+  routeTimeSections: RouteTimeSection[],
+  routeNodes: RouteNode[],
+  speedClasses: RouteTimeSpeedClass[],
+  speedClassCount: number
+) => {
+  const normalizedSpeedClasses = normalizeRouteTimeSpeedClasses(
+    speedClasses,
+    speedClassCount
+  );
+  return routeTimeSections.map((section) => {
+    const normalizedSection = normalizeRouteTimeSectionSpeedProfiles(
+      section,
+      routeNodes,
+      speedClassCount
+    );
+    const baseProfile = getRouteTimeSectionSpeedProfile(normalizedSection, 0);
+    const speedProfiles = normalizedSection.speedProfiles.map(
+      (profile, index) =>
+        index === 0
+          ? profile
+          : getScaledSpeedProfileFromBase(
+              normalizedSection,
+              routeNodes,
+              baseProfile,
+              normalizedSpeedClasses[index]?.multiplier ?? 1
+            )
+    );
+    const firstProfile = speedProfiles[0];
+    return {
+      ...normalizedSection,
+      travelMinutes: firstProfile.travelMinutes,
+      segmentMinutes: firstProfile.segmentMinutes,
+      speedProfiles,
+    };
+  });
 };
 
 const replaceRouteEdgeInRouteTimeSection = (
@@ -1674,6 +1811,10 @@ export const reducer = (prevState: State, action: Actions): State => {
             action.payload.connectionType
           )
         ),
+        isFlipped: action.payload.isFlipped ?? false,
+        isTerminal: action.payload.isTerminal ?? false,
+        isHorizontalTerminal: action.payload.isHorizontalTerminal ?? false,
+        isVerticalTerminal: action.payload.isVerticalTerminal ?? false,
         platformNumber: action.payload.platformNumber.trim(),
         platformCount,
         platformLabels: normalizePlatformLabels(undefined, platformCount),
@@ -1730,6 +1871,13 @@ export const reducer = (prevState: State, action: Actions): State => {
               action.payload.connectionType ?? routeNode.connectionType
             )
           ),
+          isFlipped: action.payload.isFlipped ?? routeNode.isFlipped,
+          isTerminal: action.payload.isTerminal ?? routeNode.isTerminal,
+          isHorizontalTerminal:
+            action.payload.isHorizontalTerminal ??
+            routeNode.isHorizontalTerminal,
+          isVerticalTerminal:
+            action.payload.isVerticalTerminal ?? routeNode.isVerticalTerminal,
           platformNumber:
             action.payload.platformNumber === undefined
               ? routeNode.platformNumber
@@ -1894,6 +2042,17 @@ export const reducer = (prevState: State, action: Actions): State => {
       };
     }
 
+    case "flipRouteNode": {
+      return {
+        ...prevState,
+        routeNodes: prevState.routeNodes.map((routeNode) =>
+          routeNode.id === action.payload.id
+            ? { ...routeNode, isFlipped: !routeNode.isFlipped }
+            : routeNode
+        ),
+      };
+    }
+
     case "removeRouteNode": {
       const routeTimeSections = prevState.routeTimeSections.filter(
         (section) =>
@@ -2048,6 +2207,10 @@ export const reducer = (prevState: State, action: Actions): State => {
           action.payload.rotation,
           allowsFourDirectionNode("connection", connectionType)
         ),
+        isFlipped: false,
+        isTerminal: false,
+        isHorizontalTerminal: false,
+        isVerticalTerminal: false,
         platformNumber: "",
         platformCount: 1,
         platformLabels: normalizePlatformLabels(undefined, 1),
@@ -2140,6 +2303,10 @@ export const reducer = (prevState: State, action: Actions): State => {
           action.payload.rotation,
           allowsFourDirectionNode("connection", connectionType)
         ),
+        isFlipped: false,
+        isTerminal: false,
+        isHorizontalTerminal: false,
+        isVerticalTerminal: false,
         platformNumber: "",
         platformCount: 1,
         platformLabels: normalizePlatformLabels(undefined, 1),
@@ -2324,10 +2491,12 @@ export const reducer = (prevState: State, action: Actions): State => {
       }
 
       const speedClassCount = getStateRouteTimeSpeedClassCount(prevState);
-      const selectedSpeedClassIndex = Math.min(
-        Math.max(0, speedClassCount - 1),
-        getNormalizedSpeedClassIndex(action.payload.speedClassIndex)
-      );
+      const selectedSpeedClassIndex = prevState.routeTimeSpeedMultiplierEnabled
+        ? 0
+        : Math.min(
+            Math.max(0, speedClassCount - 1),
+            getNormalizedSpeedClassIndex(action.payload.speedClassIndex)
+          );
       const draftSection: RouteTimeSection = {
         id: action.payload.id ?? createId("rts"),
         startNodeId: action.payload.startNodeId,
@@ -2372,7 +2541,15 @@ export const reducer = (prevState: State, action: Actions): State => {
         speedProfiles,
       };
 
-      const routeTimeSections = [...prevState.routeTimeSections, section];
+      const nextRouteTimeSections = [...prevState.routeTimeSections, section];
+      const routeTimeSections = prevState.routeTimeSpeedMultiplierEnabled
+        ? applySpeedClassMultipliersToRouteTimeSections(
+            nextRouteTimeSections,
+            prevState.routeNodes,
+            prevState.routeTimeSpeedClasses,
+            speedClassCount
+          )
+        : nextRouteTimeSections;
       return {
         ...prevState,
         routeTimeSections,
@@ -2389,11 +2566,13 @@ export const reducer = (prevState: State, action: Actions): State => {
 
     case "updateRouteTimeSection": {
       const speedClassCount = getStateRouteTimeSpeedClassCount(prevState);
-      const speedClassIndex = Math.min(
-        Math.max(0, speedClassCount - 1),
-        getNormalizedSpeedClassIndex(action.payload.speedClassIndex)
-      );
-      const routeTimeSections = prevState.routeTimeSections.map((section) =>
+      const speedClassIndex = prevState.routeTimeSpeedMultiplierEnabled
+        ? 0
+        : Math.min(
+            Math.max(0, speedClassCount - 1),
+            getNormalizedSpeedClassIndex(action.payload.speedClassIndex)
+          );
+      const nextRouteTimeSections = prevState.routeTimeSections.map((section) =>
         section.id === action.payload.id
           ? (() => {
               const normalizedSection = normalizeRouteTimeSectionSpeedProfiles(
@@ -2421,6 +2600,14 @@ export const reducer = (prevState: State, action: Actions): State => {
             })()
           : section
       );
+      const routeTimeSections = prevState.routeTimeSpeedMultiplierEnabled
+        ? applySpeedClassMultipliersToRouteTimeSections(
+            nextRouteTimeSections,
+            prevState.routeNodes,
+            prevState.routeTimeSpeedClasses,
+            speedClassCount
+          )
+        : nextRouteTimeSections;
       return {
         ...prevState,
         routeTimeSections,
@@ -2437,34 +2624,54 @@ export const reducer = (prevState: State, action: Actions): State => {
 
     case "addRouteTimeSpeedClass": {
       const currentCount = getStateRouteTimeSpeedClassCount(prevState);
-      const copyFromIndex = Math.min(
-        Math.max(0, currentCount - 1),
-        getNormalizedSpeedClassIndex(action.payload?.copyFromIndex)
-      );
-      const routeTimeSections = prevState.routeTimeSections.map((section) => {
-        const normalizedSection = normalizeRouteTimeSectionSpeedProfiles(
-          section,
-          prevState.routeNodes,
+      const copyFromIndex = prevState.routeTimeSpeedMultiplierEnabled
+        ? 0
+        : Math.min(
+            Math.max(0, currentCount - 1),
+            getNormalizedSpeedClassIndex(action.payload?.copyFromIndex)
+          );
+      const nextSpeedClasses = [
+        ...normalizeRouteTimeSpeedClasses(
+          prevState.routeTimeSpeedClasses,
           currentCount
-        );
-        const sourceProfile = getRouteTimeSectionSpeedProfile(
-          normalizedSection,
-          copyFromIndex
-        );
-        return {
-          ...normalizedSection,
-          speedProfiles: [
-            ...normalizedSection.speedProfiles,
-            {
-              travelMinutes: sourceProfile.travelMinutes,
-              segmentMinutes: [...sourceProfile.segmentMinutes],
-            },
-          ],
-        };
-      });
+        ),
+        { baseIndex: 0, multiplier: 1 },
+      ];
+      const nextRouteTimeSections = prevState.routeTimeSections.map(
+        (section) => {
+          const normalizedSection = normalizeRouteTimeSectionSpeedProfiles(
+            section,
+            prevState.routeNodes,
+            currentCount
+          );
+          const sourceProfile = getRouteTimeSectionSpeedProfile(
+            normalizedSection,
+            copyFromIndex
+          );
+          return {
+            ...normalizedSection,
+            speedProfiles: [
+              ...normalizedSection.speedProfiles,
+              {
+                travelMinutes: sourceProfile.travelMinutes,
+                segmentMinutes: [...sourceProfile.segmentMinutes],
+              },
+            ],
+          };
+        }
+      );
+      const routeTimeSections = prevState.routeTimeSpeedMultiplierEnabled
+        ? applySpeedClassMultipliersToRouteTimeSections(
+            nextRouteTimeSections,
+            prevState.routeNodes,
+            nextSpeedClasses,
+            currentCount + 1
+          )
+        : nextRouteTimeSections;
       return {
         ...prevState,
         routeTimeSpeedClassCount: currentCount + 1,
+        routeTimeSpeedClasses: nextSpeedClasses,
         routeTimeSections,
         trainRuns: prevState.trainRuns.map((trainRun) =>
           withAutoStops(
@@ -2474,6 +2681,156 @@ export const reducer = (prevState: State, action: Actions): State => {
             prevState.routeTemplates
           )
         ),
+      };
+    }
+
+    case "updateRouteTimeSpeedClass": {
+      const currentCount = getStateRouteTimeSpeedClassCount(prevState);
+      const speedClassIndex = Math.min(
+        Math.max(0, currentCount - 1),
+        getNormalizedSpeedClassIndex(action.payload.index)
+      );
+      const speedClasses = normalizeRouteTimeSpeedClasses(
+        prevState.routeTimeSpeedClasses,
+        currentCount
+      );
+      const previousSpeedClass = speedClasses[speedClassIndex] ?? {
+        baseIndex: 0,
+        multiplier: 1,
+      };
+      const nextMultiplier = normalizeSpeedClassMultiplier(
+        speedClassIndex === 0
+          ? 1
+          : action.payload.multiplier ?? previousSpeedClass.multiplier
+      );
+      const nextBaseIndex = 0;
+      const nextSpeedClasses = speedClasses.map((speedClass, index) =>
+        index === speedClassIndex
+          ? {
+              ...speedClass,
+              baseIndex: nextBaseIndex,
+              multiplier: nextMultiplier,
+            }
+          : speedClass
+      );
+      const routeTimeSections = prevState.routeTimeSpeedMultiplierEnabled
+        ? applySpeedClassMultipliersToRouteTimeSections(
+            prevState.routeTimeSections,
+            prevState.routeNodes,
+            nextSpeedClasses,
+            currentCount
+          )
+        : prevState.routeTimeSections;
+      return {
+        ...prevState,
+        routeTimeSpeedClassCount: currentCount,
+        routeTimeSpeedClasses: nextSpeedClasses,
+        routeTimeSections,
+        trainRuns: prevState.trainRuns.map((trainRun) =>
+          withAutoStops(
+            trainRun,
+            routeTimeSections,
+            prevState.routeNodes,
+            prevState.routeTemplates
+          )
+        ),
+      };
+    }
+
+    case "setRouteTimeSpeedMultiplierEnabled": {
+      const currentCount = getStateRouteTimeSpeedClassCount(prevState);
+      const enabled = action.payload.enabled;
+      const routeTimeSpeedClasses = normalizeRouteTimeSpeedClasses(
+        prevState.routeTimeSpeedClasses,
+        currentCount
+      ).map((speedClass, index) => ({
+        ...speedClass,
+        baseIndex: 0,
+        multiplier: enabled ? 1 : index === 0 ? 1 : speedClass.multiplier,
+      }));
+      const routeTimeSections = enabled
+        ? applySpeedClassMultipliersToRouteTimeSections(
+            prevState.routeTimeSections,
+            prevState.routeNodes,
+            routeTimeSpeedClasses,
+            currentCount
+          )
+        : prevState.routeTimeSections;
+      return {
+        ...prevState,
+        routeTimeSpeedClassCount: currentCount,
+        routeTimeSpeedClasses,
+        routeTimeSpeedMultiplierEnabled: enabled,
+        routeTimeSections,
+        trainRuns: prevState.trainRuns.map((trainRun) =>
+          withAutoStops(
+            trainRun,
+            routeTimeSections,
+            prevState.routeNodes,
+            prevState.routeTemplates
+          )
+        ),
+      };
+    }
+
+    case "removeRouteTimeSpeedClass": {
+      const currentCount = getStateRouteTimeSpeedClassCount(prevState);
+      if (currentCount <= 1) return prevState;
+      const speedClassIndex = Math.min(
+        Math.max(0, currentCount - 1),
+        getNormalizedSpeedClassIndex(action.payload.index)
+      );
+      const routeTimeSections = prevState.routeTimeSections.map((section) =>
+        removeRouteTimeSectionSpeedProfile(
+          section,
+          prevState.routeNodes,
+          currentCount,
+          speedClassIndex
+        )
+      );
+      const routeTimeSpeedClasses = normalizeRouteTimeSpeedClasses(
+        prevState.routeTimeSpeedClasses,
+        currentCount
+      )
+        .filter((_, index) => index !== speedClassIndex)
+        .map((speedClass) => {
+          const remappedBaseIndex =
+            speedClass.baseIndex > speedClassIndex
+              ? speedClass.baseIndex - 1
+              : speedClass.baseIndex === speedClassIndex
+              ? 0
+              : speedClass.baseIndex;
+          return {
+            ...speedClass,
+            baseIndex: Math.max(
+              0,
+              Math.min(currentCount - 2, remappedBaseIndex)
+            ),
+          };
+        });
+      const trainRuns = prevState.trainRuns.map((trainRun) => {
+        const currentIndex = getNormalizedSpeedClassIndex(
+          trainRun.speedClassIndex
+        );
+        const nextSpeedClassIndex =
+          currentIndex > speedClassIndex
+            ? currentIndex - 1
+            : currentIndex === speedClassIndex
+            ? Math.max(0, speedClassIndex - 1)
+            : currentIndex;
+        return withAutoStops(
+          { ...trainRun, speedClassIndex: nextSpeedClassIndex },
+          routeTimeSections,
+          prevState.routeNodes,
+          prevState.routeTemplates
+        );
+      });
+      return {
+        ...prevState,
+        routeTimeSpeedClassCount: currentCount - 1,
+        routeTimeSpeedClasses,
+        routeTimeSections,
+        trainRuns,
       };
     }
 

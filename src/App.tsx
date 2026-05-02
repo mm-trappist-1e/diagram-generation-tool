@@ -212,9 +212,7 @@ const loadInitialDarkTheme = () => {
   const saved = window.localStorage.getItem(themeStorageKey);
   if (saved === "dark") return true;
   if (saved === "light") return false;
-  return window.matchMedia
-    ? window.matchMedia("(prefers-color-scheme: dark)").matches
-    : false;
+  return true;
 };
 
 const historyReducer = (

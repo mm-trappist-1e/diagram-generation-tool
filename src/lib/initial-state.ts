@@ -9,6 +9,8 @@ export const getInitialState = (): State => ({
   routeEdges: [],
   routeTimeSections: [],
   routeTimeSpeedClassCount: 1,
+  routeTimeSpeedClasses: [{ baseIndex: 0, multiplier: 1 }],
+  routeTimeSpeedMultiplierEnabled: false,
   routeTemplates: [],
   trainRuns: [],
   routeReadDirection: "topToBottom",

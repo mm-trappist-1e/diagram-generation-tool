@@ -682,9 +682,12 @@ export const TrainOperationSection = ({
       state.trainRuns.find((trainRun) => trainRun.id === selectedTrainRunId),
     [selectedTrainRunId, state.trainRuns]
   );
-  const routeTimeSpeedClassCount = getRouteTimeSpeedClassCount(
-    state.routeTimeSections,
-    state.routeTimeSpeedClassCount
+  const routeTimeSpeedClassCount = Math.max(
+    state.routeTimeSpeedClasses?.length ?? 0,
+    getRouteTimeSpeedClassCount(
+      state.routeTimeSections,
+      state.routeTimeSpeedClassCount
+    )
   );
   const selectedTrainRouteTemplate = useMemo<RouteTemplate | undefined>(
     () =>
@@ -1279,6 +1282,7 @@ export const TrainOperationSection = ({
         <div className="min-w-[240px] flex-1">
           <TextInput
             placeholder="経路セット名を追加"
+            addButtonLabel="追加"
             onEnterPress={addRouteTemplate}
           />
         </div>
@@ -1399,6 +1403,7 @@ export const TrainOperationSection = ({
           <h3 className="font-bold text-gray-700">列車一覧</h3>
           <TextInput
             placeholder="列車名を追加"
+            addButtonLabel="追加"
             onEnterPress={(name) =>
               dispatch({ type: "addTrainRun", payload: { name } })
             }
@@ -1768,7 +1773,7 @@ export const TrainOperationSection = ({
                         { length: routeTimeSpeedClassCount },
                         (_, index) => (
                           <option key={index} value={index}>
-                            {index + 1}番設定
+                            車速{index + 1}
                           </option>
                         )
                       )}

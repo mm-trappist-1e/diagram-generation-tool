@@ -79,6 +79,120 @@
   }
 
   html.dark .route-map-canvas.bg-gray-50 {
-    background-color: rgb(249 250 251);
+    border-color: rgb(51 65 85);
+    background-color: rgb(15 23 42);
+  }
+
+  html.dark .route-map-canvas :is(path, rect, circle, text, line, polygon),
+  html.dark .route-map-canvas .canvas-invert {
+    filter: invert(1);
+  }
+
+  html.dark .route-map-canvas .canvas-fixed-light-stroke {
+    filter: none;
+    stroke: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-fixed-light-fill {
+    filter: none;
+    fill: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-fixed-light-button {
+    filter: none;
+    fill: rgb(30 41 59);
+    stroke: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-fixed-white-port {
+    filter: none;
+    fill: rgb(255 255 255);
+    stroke: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-open-port {
+    filter: none;
+    fill: rgb(15 23 42);
+    stroke: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-selected-stroke {
+    filter: none;
+    stroke: rgb(220 38 38);
+  }
+
+  html.dark .route-map-canvas .canvas-selected-train-stroke {
+    filter: none;
+    stroke: rgb(180 83 9);
+  }
+
+  html.dark .route-map-canvas .canvas-selected-fill {
+    filter: none;
+    fill: rgb(220 38 38);
+  }
+
+  html.dark .route-map-canvas .canvas-selected-port {
+    filter: none;
+    fill: rgb(220 38 38);
+    stroke: rgb(220 38 38);
+  }
+
+  html.dark .route-map-canvas .canvas-selected-label-box {
+    filter: none;
+    fill: rgb(15 23 42);
+    stroke: rgb(220 38 38);
+  }
+
+  html.dark .route-map-canvas .canvas-timetable-text {
+    filter: none;
+    fill: rgb(255 255 255);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill {
+    filter: none;
+    fill: rgb(30 41 59);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-station {
+    fill: rgb(30 41 59);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-garage {
+    fill: rgb(24 78 105);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-yard {
+    fill: rgb(38 82 54);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-turnback {
+    fill: rgb(91 45 78);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-crossing {
+    fill: rgb(59 53 97);
+  }
+
+  html.dark .route-map-canvas .canvas-node-fill-candidate {
+    fill: rgb(30 64 175);
+  }
+
+  html.dark .route-map-canvas .canvas-flow-effect-stroke {
+    filter: none;
+    stroke: rgb(0 0 0);
+  }
+
+  html.dark .route-map-canvas .canvas-grid-pattern {
+    filter: none;
+  }
+
+  html.dark .route-map-canvas .canvas-grid-line-minor {
+    filter: none;
+    stroke: rgb(148 163 184);
+  }
+
+  html.dark .route-map-canvas .canvas-grid-line-major {
+    filter: none;
+    stroke: rgb(203 213 225);
   }
 }

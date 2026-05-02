@@ -72,7 +72,7 @@ type RouteTimeDraft = {
   routeEdgeIds: string[];
 };
 type BranchInsertDragState = {
-  routeEdgeId: string;
+  routeEdgeIds: string[];
   placementPoint: Point;
   currentPoint: Point;
 };
@@ -133,7 +133,6 @@ type LayoutInfo = {
 
 const nodeTypes: RouteNodeType[] = [
   "station",
-  "terminal",
   "garage",
   "yard",
   "turnback",
@@ -164,6 +163,8 @@ const portGap = layoutGridSize * 2;
 const portRadius = 7;
 const routeStubLength = layoutGridSize * 2;
 const routeClearance = layoutGridSize * 2;
+const routeTimeFlowDasharray = "10 26";
+const routeTimeFlowDashoffsetValues = "36;0";
 const rotateButtonRadius = 12;
 const baseCanvasSide = 3600;
 const canvasSizeMultiplier = 10;
@@ -174,7 +175,6 @@ const maxCanvasZoom = 2.4;
 
 const nodeColors: Record<RouteNodeType, string> = {
   station: "#ffffff",
-  terminal: "#f8fafc",
   garage: "#e0f2fe",
   yard: "#ecfccb",
   connection: "#dbeafe",
@@ -274,6 +274,81 @@ const getRouteTimeSectionStoredSegmentMinutes = (
   shouldDisplayRouteTimeSectionReversed(section)
     ? [...displaySegmentMinutes].reverse()
     : displaySegmentMinutes;
+
+const routeTimeSectionPortMatchesEdgeEndpoint = (
+  port: RouteTimeSectionPort,
+  nodeId: string,
+  side: RoutePortSide,
+  index: number
+) => port.nodeId === nodeId && port.side === side && port.index === index;
+
+const getRouteTimeSectionRouteEdgeDirection = (
+  section: State["routeTimeSections"][number],
+  routeEdge: RouteEdge
+) => {
+  for (let index = 0; index < section.routePorts.length - 1; index += 1) {
+    const fromPort = section.routePorts[index];
+    const toPort = section.routePorts[index + 1];
+    if (
+      routeTimeSectionPortMatchesEdgeEndpoint(
+        fromPort,
+        routeEdge.fromNodeId,
+        routeEdge.fromPortSide,
+        routeEdge.fromPortIndex
+      ) &&
+      routeTimeSectionPortMatchesEdgeEndpoint(
+        toPort,
+        routeEdge.toNodeId,
+        routeEdge.toPortSide,
+        routeEdge.toPortIndex
+      )
+    ) {
+      return "forward";
+    }
+    if (
+      routeTimeSectionPortMatchesEdgeEndpoint(
+        fromPort,
+        routeEdge.toNodeId,
+        routeEdge.toPortSide,
+        routeEdge.toPortIndex
+      ) &&
+      routeTimeSectionPortMatchesEdgeEndpoint(
+        toPort,
+        routeEdge.fromNodeId,
+        routeEdge.fromPortSide,
+        routeEdge.fromPortIndex
+      )
+    ) {
+      return "reverse";
+    }
+  }
+  return "forward";
+};
+
+const getRouteTimeFlowRoutePoints = (
+  section: State["routeTimeSections"][number],
+  routeEdge: RouteEdge,
+  geometry: RouteEdgeGeometry
+) => {
+  const sectionForwardUsesGeometry =
+    getRouteTimeSectionRouteEdgeDirection(section, routeEdge) === "forward";
+  const toFlowPoints = (useSectionForward: boolean) => {
+    const useGeometryDirection =
+      sectionForwardUsesGeometry === useSectionForward;
+    return useGeometryDirection
+      ? geometry.routePoints
+      : [...geometry.routePoints].reverse();
+  };
+  switch (section.internalDirection ?? "forward") {
+    case "reverse":
+      return [toFlowPoints(false)];
+    case "bidirectional":
+      return [toFlowPoints(true), toFlowPoints(false)];
+    case "forward":
+    default:
+      return [toFlowPoints(true)];
+  }
+};
 
 const getRouteTimeSectionLabel = (
   state: State,
@@ -513,18 +588,22 @@ const shouldReverseRotatedPortIndex = (
   routeNode: RouteNode,
   side: RoutePortSide
 ) => {
-  if (routeNode.type === "connection" || routeNode.type === "crossing") {
+  if (routeNode.type === "connection") {
     return false;
   }
+  if (routeNode.type === "crossing") return Boolean(routeNode.isFlipped);
   const rotation = getNodeRotation(routeNode);
-  if (rotation === 0) return false;
+  const isFlipped = Boolean(routeNode.isFlipped);
+  if (rotation === 0) return isFlipped;
   const canonicalSide = rotatePortSideByDegrees(side, -rotation);
   const rotatedAxis = rotateAxisByDegrees(
     getPortIndexAxis(canonicalSide),
     rotation
   );
   const currentAxis = getPortIndexAxis(side);
-  return rotatedAxis.x * currentAxis.x + rotatedAxis.y * currentAxis.y < 0;
+  const isRotationReversed =
+    rotatedAxis.x * currentAxis.x + rotatedAxis.y * currentAxis.y < 0;
+  return isRotationReversed !== isFlipped;
 };
 
 const getVisualPortIndex = (
@@ -537,6 +616,15 @@ const getVisualPortIndex = (
   return shouldReverseRotatedPortIndex(routeNode, side)
     ? count - 1 - clampedIndex
     : clampedIndex;
+};
+
+const shouldReverseRouteTemplatePlatformOrder = (routeNode: RouteNode) => {
+  const isFlipped = Boolean(routeNode.isFlipped);
+  if (routeNode.type === "crossing") return isFlipped;
+  const isRotationReversed =
+    routeNode.type !== "connection" &&
+    (getNodeRotation(routeNode) === 90 || getNodeRotation(routeNode) === 180);
+  return isRotationReversed !== isFlipped;
 };
 
 const getActualConnectionSide = (
@@ -806,7 +894,9 @@ const normalizePlatformLabels = (labels: string[] | undefined, count: number) =>
   );
 
 const isSingleEndedNode = (routeNode: RouteNode) =>
-  routeNode.type === "terminal" || routeNode.type === "turnback";
+  routeNode.type !== "connection" &&
+  routeNode.type !== "crossing" &&
+  Boolean(routeNode.isTerminal);
 
 const getSingleEndedPortSide = (routeNode: RouteNode): RoutePortSide => {
   const rotation = getNodeRotation(routeNode);
@@ -815,6 +905,14 @@ const getSingleEndedPortSide = (routeNode: RouteNode): RoutePortSide => {
   if (rotation === 270) return "top";
   return "right";
 };
+
+const getCrossingHorizontalTerminalPortSide = (
+  routeNode: RouteNode
+): RoutePortSide => (getNodeRotation(routeNode) === 180 ? "left" : "right");
+
+const getCrossingVerticalTerminalPortSide = (
+  routeNode: RouteNode
+): RoutePortSide => (getNodeRotation(routeNode) === 270 ? "top" : "bottom");
 
 const getConnectionNodeLongSize = (connectionType: ConnectionType) =>
   connectionType === "turnout"
@@ -835,6 +933,20 @@ const getPortCountForSide = (routeNode: RouteNode, side: RoutePortSide) => {
       : 0;
   }
   if (routeNode.type === "crossing") {
+    if (
+      routeNode.isVerticalTerminal &&
+      (side === "top" || side === "bottom") &&
+      side !== getCrossingVerticalTerminalPortSide(routeNode)
+    ) {
+      return 0;
+    }
+    if (
+      routeNode.isHorizontalTerminal &&
+      (side === "left" || side === "right") &&
+      side !== getCrossingHorizontalTerminalPortSide(routeNode)
+    ) {
+      return 0;
+    }
     return side === "top" || side === "bottom"
       ? getVerticalPlatformCount(routeNode)
       : getPlatformCount(routeNode);
@@ -914,9 +1026,7 @@ const getRouteTemplatePlatformRegions = (routeNode: RouteNode) => {
   const width = getNodeWidth(routeNode);
   const height = getNodeHeight(routeNode);
   const isColumnSplit = isVerticalNode(routeNode);
-  const reverseOrder =
-    routeNode.type !== "crossing" &&
-    (getNodeRotation(routeNode) === 90 || getNodeRotation(routeNode) === 180);
+  const reverseOrder = shouldReverseRouteTemplatePlatformOrder(routeNode);
   return Array.from({ length: count }).map((_, index) => {
     const displayIndex = reverseOrder ? count - 1 - index : index;
     const x = isColumnSplit ? (width / count) * displayIndex : 0;
@@ -973,6 +1083,18 @@ const getNodeLayoutInfo = (routeNode: RouteNode): LayoutInfo => {
       labelBoxHeight: height,
     };
   }
+  if (isVerticalNode(routeNode)) {
+    return {
+      labelX: 0,
+      labelY: 0,
+      subLabelY: 17,
+      labelOutside: false,
+      labelBoxX: 0,
+      labelBoxY: 0,
+      labelBoxWidth: width,
+      labelBoxHeight: height,
+    };
+  }
   const narrow = width < 70;
   return {
     labelX: narrow ? width + 18 : 14,
@@ -985,6 +1107,14 @@ const getNodeLayoutInfo = (routeNode: RouteNode): LayoutInfo => {
     labelBoxHeight: narrow ? 42 : height,
   };
 };
+
+const getTextFitProps = (text: string, fontSize: number, maxWidth: number) =>
+  estimateTextWidth(text, fontSize) > maxWidth
+    ? {
+        textLength: Math.max(12, maxWidth),
+        lengthAdjust: "spacingAndGlyphs" as const,
+      }
+    : {};
 
 const getNodeObstacleRects = (routeNode: RouteNode): ObstacleRect[] => {
   if (routeNode.type === "connection") return [];
@@ -1328,6 +1458,27 @@ const getConnectionInternalSegmentsFromPorts = (
   });
 };
 
+const getRouteTimeConnectionFlowSegments = (
+  routeNode: RouteNode,
+  section: State["routeTimeSections"][number]
+) => {
+  const toSegments = (ports: RouteTimeSectionPort[]) =>
+    getConnectionInternalSegmentsFromPorts(routeNode, ports);
+
+  switch (section.internalDirection ?? "forward") {
+    case "reverse":
+      return toSegments([...section.routePorts].reverse());
+    case "bidirectional":
+      return [
+        ...toSegments(section.routePorts),
+        ...toSegments([...section.routePorts].reverse()),
+      ];
+    case "forward":
+    default:
+      return toSegments(section.routePorts);
+  }
+};
+
 const getSideVector = (side: RoutePortSide): Point => {
   if (side === "top") return { x: 0, y: -1 };
   if (side === "right") return { x: 1, y: 0 };
@@ -1386,7 +1537,10 @@ const getRouteNodePortSides = (routeNode: RouteNode): RoutePortSide[] =>
     : isSingleEndedNode(routeNode)
     ? [getSingleEndedPortSide(routeNode)]
     : routeNode.type === "crossing"
-    ? ["top", "right", "bottom", "left"]
+    ? ["top", "right", "bottom", "left"].filter(
+        (side): side is RoutePortSide =>
+          getPortCountForSide(routeNode, side as RoutePortSide) > 0
+      )
     : isVerticalNode(routeNode)
     ? ["top", "bottom"]
     : ["left", "right"];
@@ -1930,6 +2084,54 @@ const estimateTextWidth = (text: string, fontSize: number) =>
     0
   );
 
+const getPlatformLabelObstacleRects = (
+  routeNode: RouteNode,
+  padding = 4
+): ObstacleRect[] => {
+  if (routeNode.type === "connection") return [];
+  return getRouteNodePortRefs(routeNode).map((portRef) => {
+    const port = getPortPosition(routeNode, portRef.side, portRef.index);
+    const platformLabel =
+      routeNode.type === "crossing" &&
+      (portRef.side === "top" || portRef.side === "bottom")
+        ? getVerticalPlatformLabel(routeNode, portRef.index)
+        : getPlatformLabel(routeNode, portRef.index);
+    const labelX =
+      portRef.side === "left"
+        ? port.x - 16
+        : portRef.side === "right"
+        ? port.x + 16
+        : port.x;
+    const labelY =
+      portRef.side === "top"
+        ? port.y - 12
+        : portRef.side === "bottom"
+        ? port.y + 24
+        : port.y + 5;
+    const platformLabelAnchor =
+      portRef.side === "left"
+        ? "end"
+        : portRef.side === "right"
+        ? "start"
+        : "middle";
+    const width = Math.max(18, estimateTextWidth(platformLabel, 13) + 8);
+    const x =
+      platformLabelAnchor === "middle"
+        ? labelX - width / 2
+        : platformLabelAnchor === "end"
+        ? labelX - width + 3
+        : labelX - 3;
+    const height = 17;
+    return {
+      id: `${routeNode.id}:platform-label:${portRef.side}:${portRef.index}`,
+      x: x - padding,
+      y: labelY - 13 - padding,
+      width: width + padding * 2,
+      height: height + padding * 2,
+    };
+  });
+};
+
 const getRoutePathSegments = (
   geometries: RouteEdgeGeometry[],
   sectionId?: string
@@ -1955,6 +2157,42 @@ const getRouteTimeLabelRect = (
   height: placement.height + padding * 2,
 });
 
+const getRouteSegmentObstacleRect = (
+  segment: RoutePathSegment,
+  padding = 12
+): ObstacleRect => {
+  const minX = Math.min(segment.from.x, segment.to.x);
+  const maxX = Math.max(segment.from.x, segment.to.x);
+  const minY = Math.min(segment.from.y, segment.to.y);
+  const maxY = Math.max(segment.from.y, segment.to.y);
+  return {
+    id: `route-segment:${
+      segment.sectionId ?? ""
+    }:${minX}:${minY}:${maxX}:${maxY}`,
+    x: minX - padding,
+    y: minY - padding,
+    width: Math.max(maxX - minX, 1) + padding * 2,
+    height: Math.max(maxY - minY, 1) + padding * 2,
+  };
+};
+
+const countRectCollisions = (rect: ObstacleRect, obstacles: ObstacleRect[]) =>
+  obstacles.reduce(
+    (count, obstacle) => count + (rectsIntersect(rect, obstacle) ? 1 : 0),
+    0
+  );
+
+const routePointsIntersectRect = (points: Point[], rect: ObstacleRect) => {
+  const compacted = compactPoints(points);
+  return compacted.some((point, index) => {
+    const next = compacted[index + 1];
+    return (
+      pointInsideRect(point, rect) ||
+      Boolean(next && segmentIntersectsRect(point, next, rect))
+    );
+  });
+};
+
 const getParallelSegmentOverlapLength = (
   a: RoutePathSegment,
   b: RoutePathSegment,
@@ -1965,7 +2203,11 @@ const getParallelSegmentOverlapLength = (
   const aVertical = a.from.x === a.to.x;
   const bVertical = b.from.x === b.to.x;
 
-  if (aHorizontal && bHorizontal && Math.abs(a.from.y - b.from.y) <= tolerance) {
+  if (
+    aHorizontal &&
+    bHorizontal &&
+    Math.abs(a.from.y - b.from.y) <= tolerance
+  ) {
     const minA = Math.min(a.from.x, a.to.x);
     const maxA = Math.max(a.from.x, a.to.x);
     const minB = Math.min(b.from.x, b.to.x);
@@ -2010,6 +2252,7 @@ const getRouteTimeLabelPlacement = (
   sectionId: string,
   allRouteTimeSegments: RoutePathSegment[],
   nodeObstacles: ObstacleRect[],
+  routeLineObstacles: ObstacleRect[],
   placedLabelRects: ObstacleRect[]
 ) => {
   const segments = getRoutePathSegments(geometries, sectionId);
@@ -2030,12 +2273,14 @@ const getRouteTimeLabelPlacement = (
       preferredDirection = laneDirection * (normal.x >= 0 ? 1 : -1);
     }
     const offsets = [
-      preferredDirection * 34 + laneOffset,
-      -preferredDirection * 34 + laneOffset,
-      preferredDirection * 54 + laneOffset,
-      -preferredDirection * 54 + laneOffset,
+      preferredDirection * 42 + laneOffset,
+      -preferredDirection * 42 + laneOffset,
+      preferredDirection * 64 + laneOffset,
+      -preferredDirection * 64 + laneOffset,
+      preferredDirection * 86 + laneOffset,
+      -preferredDirection * 86 + laneOffset,
     ].map((offset) =>
-      Math.abs(offset) < 26 ? (offset < 0 ? -26 : 26) : offset
+      Math.abs(offset) < 34 ? (offset < 0 ? -34 : 34) : offset
     );
 
     return ratios.flatMap((ratio, ratioIndex) =>
@@ -2063,18 +2308,11 @@ const getRouteTimeLabelPlacement = (
       sectionId,
       allRouteTimeSegments
     );
-    const labelCollisions = placedLabelRects.reduce(
-      (count, rect) => count + (rectsIntersect(labelRect, rect) ? 1 : 0),
-      0
-    );
-    const nodeCollisions = nodeObstacles.reduce(
-      (count, rect) => count + (rectsIntersect(labelRect, rect) ? 1 : 0),
-      0
-    );
-    const routeLineCollisions = allRouteTimeSegments.reduce(
-      (count, segment) =>
-        count + (segmentIntersectsRect(segment.from, segment.to, labelRect) ? 1 : 0),
-      0
+    const labelCollisions = countRectCollisions(labelRect, placedLabelRects);
+    const nodeCollisions = countRectCollisions(labelRect, nodeObstacles);
+    const routeLineCollisions = countRectCollisions(
+      labelRect,
+      routeLineObstacles
     );
     const outOfBounds =
       labelRect.x < 0 ||
@@ -2084,11 +2322,11 @@ const getRouteTimeLabelPlacement = (
         ? 1
         : 0;
     const score =
+      nodeCollisions * 5_000_000 +
+      routeLineCollisions * 2_000_000 +
+      labelCollisions * 1_500_000 +
       sharedSectionCount * 1_000_000 +
-      labelCollisions * 250_000 +
-      nodeCollisions * 150_000 +
       outOfBounds * 120_000 +
-      routeLineCollisions * 1_500 +
       candidate.offsetIndex * 120 +
       candidate.ratioIndex * 20 +
       candidate.segmentIndex -
@@ -2099,6 +2337,159 @@ const getRouteTimeLabelPlacement = (
   return scoredCandidates.reduce((best, candidate) =>
     candidate.score < best.score ? candidate : best
   ).placement;
+};
+
+const resolveRouteTimeLabelOverlaps = (
+  placements: Map<string, RouteTimeLabelPlacement>,
+  fixedObstacles: ObstacleRect[],
+  routeLineObstacles: ObstacleRect[]
+) => {
+  const resolved = new Map(placements);
+  const padding = 6;
+  const stackGap = 4;
+  const clampValue = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, value));
+  const getPlacementCollisionScore = (placement: RouteTimeLabelPlacement) => {
+    const rect = getRouteTimeLabelRect(placement, padding);
+    const outOfBounds =
+      rect.x < 0 ||
+      rect.y < 0 ||
+      rect.x + rect.width > canvasWidth ||
+      rect.y + rect.height > canvasHeight
+        ? 1
+        : 0;
+    return (
+      countRectCollisions(rect, fixedObstacles) * 5_000_000 +
+      countRectCollisions(rect, routeLineObstacles) * 2_000_000 +
+      outOfBounds * 120_000
+    );
+  };
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    const ids = [...resolved.keys()];
+    const parent = new Map(ids.map((id) => [id, id]));
+    const find = (id: string): string => {
+      const current = parent.get(id) ?? id;
+      if (current === id) return id;
+      const root = find(current);
+      parent.set(id, root);
+      return root;
+    };
+    const unite = (a: string, b: string) => {
+      const rootA = find(a);
+      const rootB = find(b);
+      if (rootA !== rootB) parent.set(rootB, rootA);
+    };
+
+    ids.forEach((id, index) => {
+      const placement = resolved.get(id);
+      if (!placement) return;
+      const rect = getRouteTimeLabelRect(placement, padding);
+      ids.slice(index + 1).forEach((otherId) => {
+        const otherPlacement = resolved.get(otherId);
+        if (!otherPlacement) return;
+        const otherRect = getRouteTimeLabelRect(otherPlacement, padding);
+        if (rectsIntersect(rect, otherRect)) {
+          unite(id, otherId);
+        }
+      });
+    });
+
+    const groups = new Map<string, string[]>();
+    ids.forEach((id) => {
+      const root = find(id);
+      groups.set(root, [...(groups.get(root) ?? []), id]);
+    });
+
+    let changed = false;
+    groups.forEach((groupIds) => {
+      if (groupIds.length <= 1) return;
+      const groupPlacements = groupIds.flatMap((id) => {
+        const placement = resolved.get(id);
+        return placement ? [{ id, placement }] : [];
+      });
+      if (groupPlacements.length <= 1) return;
+      const maxWidth = Math.max(
+        ...groupPlacements.map(({ placement }) => placement.width)
+      );
+      const maxHeight = Math.max(
+        ...groupPlacements.map(({ placement }) => placement.height)
+      );
+      const centerX =
+        groupPlacements.reduce((sum, { placement }) => sum + placement.x, 0) /
+        groupPlacements.length;
+      const centerY =
+        groupPlacements.reduce((sum, { placement }) => sum + placement.y, 0) /
+        groupPlacements.length;
+      const sorted = [...groupPlacements].sort(
+        (a, b) =>
+          a.placement.y - b.placement.y ||
+          a.placement.x - b.placement.x ||
+          a.id.localeCompare(b.id)
+      );
+      const totalHeight =
+        sorted.length * maxHeight + (sorted.length - 1) * stackGap;
+      const xCandidates = [
+        centerX,
+        ...sorted.map(({ placement }) => placement.x),
+        centerX - maxWidth - stackGap,
+        centerX + maxWidth + stackGap,
+        centerX - maxWidth * 1.5 - stackGap,
+        centerX + maxWidth * 1.5 + stackGap,
+      ];
+      const yCandidates = [
+        centerY,
+        centerY - maxHeight - stackGap,
+        centerY + maxHeight + stackGap,
+      ];
+      const candidateStacks = xCandidates.flatMap((candidateX) =>
+        yCandidates.map((candidateY) => {
+          const startY = clampValue(
+            candidateY - totalHeight / 2 + maxHeight / 2,
+            maxHeight / 2,
+            canvasHeight - maxHeight / 2
+          );
+          const x = clampValue(
+            candidateX,
+            maxWidth / 2,
+            canvasWidth - maxWidth / 2
+          );
+          const placements = sorted.map(({ id, placement }, index) => ({
+            id,
+            placement: {
+              ...placement,
+              x,
+              y: clampValue(
+                startY + index * (maxHeight + stackGap),
+                placement.height / 2,
+                canvasHeight - placement.height / 2
+              ),
+            },
+          }));
+          const score =
+            placements.reduce(
+              (total, item) =>
+                total + getPlacementCollisionScore(item.placement),
+              0
+            ) +
+            Math.abs(x - centerX) * 8 +
+            Math.abs(candidateY - centerY) * 4;
+          return { placements, score };
+        })
+      );
+      const bestStack = candidateStacks.reduce((best, candidate) =>
+        candidate.score < best.score ? candidate : best
+      );
+      bestStack.placements.forEach(({ id, placement }) => {
+        resolved.set(id, placement);
+      });
+      changed = true;
+    });
+
+    if (!changed) break;
+  }
+
+  return resolved;
 };
 
 const getBendCount = (points: Point[]) => {
@@ -2203,8 +2594,7 @@ const buildAutoRoutePoints = (
     sharedSameSideLane ??
     getIndexedSideLane(fromNode, fromSide, fromPortIndex, to);
   const toLane =
-    sharedSameSideLane ??
-    getIndexedSideLane(toNode, toSide, toPortIndex, from);
+    sharedSameSideLane ?? getIndexedSideLane(toNode, toSide, toPortIndex, from);
   const laneStart = getLanePoint(start, fromSide, fromLane);
   const laneEnd = getLanePoint(end, toSide, toLane);
   const fromRect = getNodeRect(fromNode);
@@ -2501,11 +2891,16 @@ export const RouteNetworkEditor = ({
     () => new Set()
   );
   const [selectedEdgeId, setSelectedEdgeId] = useState("");
+  const [selectedRouteEdgeIds, setSelectedRouteEdgeIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [selectedBranchEdgeIds, setSelectedBranchEdgeIds] = useState<string[]>(
     []
   );
   const [selectedRouteTimeSectionId, setSelectedRouteTimeSectionId] =
     useState("");
+  const [selectedRouteTimeSectionIds, setSelectedRouteTimeSectionIds] =
+    useState<Set<string>>(() => new Set());
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [canvasPanState, setCanvasPanState] = useState<CanvasPanState | null>(
     null
@@ -2527,8 +2922,10 @@ export const RouteNetworkEditor = ({
     Array<RouteTimeDraft | null>
   >([]);
   const [routeTimeMinutes, setRouteTimeMinutes] = useState(0);
-  const [selectedRouteTimeSpeedClassIndex, setSelectedRouteTimeSpeedClassIndex] =
-    useState(0);
+  const [
+    selectedRouteTimeSpeedClassIndex,
+    setSelectedRouteTimeSpeedClassIndex,
+  ] = useState(0);
   const [routeTimeMessage, setRouteTimeMessage] = useState("");
   const [isRouteTemplateMode, setIsRouteTemplateMode] = useState(false);
   const [routeTemplatePendingStart, setRouteTemplatePendingStart] =
@@ -2549,10 +2946,24 @@ export const RouteNetworkEditor = ({
   const selectedTrainRun = state.trainRuns.find(
     (trainRun) => trainRun.id === selectedTrainRunId
   );
-  const routeTimeSpeedClassCount = getRouteTimeSpeedClassCount(
-    state.routeTimeSections,
-    state.routeTimeSpeedClassCount
+  const routeTimeSpeedClassCount = Math.max(
+    state.routeTimeSpeedClasses?.length ?? 0,
+    getRouteTimeSpeedClassCount(
+      state.routeTimeSections,
+      state.routeTimeSpeedClassCount
+    )
   );
+  const routeTimeSpeedClasses = useMemo(
+    () =>
+      Array.from({ length: routeTimeSpeedClassCount }, (_, index) => ({
+        baseIndex: state.routeTimeSpeedClasses?.[index]?.baseIndex ?? 0,
+        multiplier: state.routeTimeSpeedClasses?.[index]?.multiplier ?? 1,
+      })),
+    [routeTimeSpeedClassCount, state.routeTimeSpeedClasses]
+  );
+  const routeTimeManualInputDisabled =
+    state.routeTimeSpeedMultiplierEnabled &&
+    selectedRouteTimeSpeedClassIndex > 0;
   const routeTimeSectionsForSelectedSpeed = useMemo(
     () =>
       getRouteTimeSectionsForSpeedClass(
@@ -2561,9 +2972,42 @@ export const RouteNetworkEditor = ({
       ),
     [selectedRouteTimeSpeedClassIndex, state.routeTimeSections]
   );
-  const selectedRouteTemplate = state.routeTemplates.find(
-    (routeTemplate) => routeTemplate.id === selectedRouteTemplateId
+  const routeTimeSectionByIdForSelectedSpeed = useMemo(
+    () =>
+      new Map(
+        routeTimeSectionsForSelectedSpeed.map((section) => [
+          section.id,
+          section,
+        ])
+      ),
+    [routeTimeSectionsForSelectedSpeed]
   );
+  const routeTimeSectionColorById = useMemo(() => {
+    const pairColorByKey = new Map<string, string>();
+    const colorById = new Map<string, string>();
+    routeTimeSectionsForSelectedSpeed.forEach((section) => {
+      const pairKey = getRouteTimeSectionNodePairKey(section);
+      if (!pairColorByKey.has(pairKey)) {
+        pairColorByKey.set(
+          pairKey,
+          routeTimeSectionPalette[
+            pairColorByKey.size % routeTimeSectionPalette.length
+          ]
+        );
+      }
+      colorById.set(section.id, pairColorByKey.get(pairKey) ?? "#16a34a");
+    });
+    return colorById;
+  }, [routeTimeSectionsForSelectedSpeed]);
+  const getDisplayRouteTimeSectionColor = (
+    section: State["routeTimeSections"][number]
+  ) =>
+    routeTimeSectionColorById.get(section.id) ??
+    getRouteTimeSectionColor(section);
+  const selectedRouteTemplate =
+    state.routeTemplates.find(
+      (routeTemplate) => routeTemplate.id === selectedRouteTemplateId
+    ) ?? state.routeTemplates[0];
   const routeTemplateRouteSections =
     selectedRouteTemplate?.[routeTemplateEditKey] ?? [];
   const routeTemplateReachablePlatformKeys = getReachablePlatformKeys(
@@ -2817,26 +3261,36 @@ export const RouteNetworkEditor = ({
     return ids;
   }, [lastStopRouteNodeId, routeNodeById, state.routeEdges]);
 
-  const trainRouteGeometries = useMemo(() => {
-    const routeSectionIds = highlightedRouteSections.map(
-      (section) => section.routeTimeSectionId
-    );
-    if (routeSectionIds.length === 0) return [];
-    const routeEdgeIds = new Set(
-      routeSectionIds.flatMap(
-        (routeSectionId) =>
-          state.routeTimeSections.find(
-            (section) => section.id === routeSectionId
-          )?.routeEdgeIds ?? []
-      )
-    );
-    return [...routeEdgeIds].flatMap((routeEdgeId) => {
-      const geometry = routeEdgeGeometryById.get(routeEdgeId);
-      return geometry ? [geometry] : [];
+  const trainRouteGeometryHighlights = useMemo(() => {
+    if (highlightedRouteSections.length === 0) return [];
+    return highlightedRouteSections.flatMap((routeSection, sectionIndex) => {
+      const section =
+        routeTimeSectionByIdForSelectedSpeed.get(
+          routeSection.routeTimeSectionId
+        ) ??
+        state.routeTimeSections.find(
+          (candidate) => candidate.id === routeSection.routeTimeSectionId
+        );
+      if (!section) return [];
+      const color = getDisplayRouteTimeSectionColor(section);
+      return section.routeEdgeIds.flatMap((routeEdgeId) => {
+        const geometry = routeEdgeGeometryById.get(routeEdgeId);
+        return geometry
+          ? [
+              {
+                key: `${section.id}:${sectionIndex}:${routeEdgeId}`,
+                geometry,
+                color,
+              },
+            ]
+          : [];
+      });
     });
   }, [
     highlightedRouteSections,
     routeEdgeGeometryById,
+    routeTimeSectionByIdForSelectedSpeed,
+    routeTimeSectionColorById,
     state.routeTimeSections,
   ]);
 
@@ -2888,9 +3342,20 @@ export const RouteNetworkEditor = ({
     });
     const allRouteTimeSegments = routeTimeSectionsForSelectedSpeed.flatMap(
       (section) =>
-        getRoutePathSegments(sectionGeometriesById.get(section.id) ?? [], section.id)
+        getRoutePathSegments(
+          sectionGeometriesById.get(section.id) ?? [],
+          section.id
+        )
     );
-    const nodeObstacles = state.routeNodes.flatMap(getNodeObstacleRects);
+    const routeLineObstacles = allRouteTimeSegments.map((segment) =>
+      getRouteSegmentObstacleRect(segment)
+    );
+    const nodeObstacles = [
+      ...state.routeNodes.flatMap(getNodeObstacleRects),
+      ...state.routeNodes.flatMap((routeNode) =>
+        getPlatformLabelObstacleRects(routeNode)
+      ),
+    ];
     const placedLabelRects: ObstacleRect[] = [];
     const placementById = new Map<string, RouteTimeLabelPlacement>();
 
@@ -2905,6 +3370,7 @@ export const RouteNetworkEditor = ({
         section.id,
         allRouteTimeSegments,
         nodeObstacles,
+        routeLineObstacles,
         placedLabelRects
       );
       if (!placement) return;
@@ -2915,14 +3381,61 @@ export const RouteNetworkEditor = ({
       });
     });
 
-    return placementById;
-  }, [routeEdgeGeometryById, routeTimeSectionsForSelectedSpeed, state.routeNodes]);
+    return resolveRouteTimeLabelOverlaps(
+      placementById,
+      nodeObstacles,
+      routeLineObstacles
+    );
+  }, [
+    routeEdgeGeometryById,
+    routeTimeSectionsForSelectedSpeed,
+    state.routeNodes,
+  ]);
+  const highlightedRouteTimeEndpointColorByKey = useMemo(() => {
+    const selectedSectionIds = new Set<string>();
+    if (selectedRouteTimeSectionId)
+      selectedSectionIds.add(selectedRouteTimeSectionId);
+    const rangeSelectedSectionIds = new Set(selectedRouteTimeSectionIds);
+    const colorByKey = new Map<string, string>();
+    routeTimeSectionsForSelectedSpeed.forEach((section) => {
+      const isRangeSelected = rangeSelectedSectionIds.has(section.id);
+      const isSelected = selectedSectionIds.has(section.id);
+      if (!isRangeSelected && !isSelected) return;
+      const sectionColor = "#dc2626";
+      colorByKey.set(
+        getPortKey(
+          section.startNodeId,
+          section.startPortSide,
+          section.startPortIndex
+        ),
+        sectionColor
+      );
+      colorByKey.set(
+        getPortKey(
+          section.endNodeId,
+          section.endPortSide,
+          section.endPortIndex
+        ),
+        sectionColor
+      );
+    });
+    return colorByKey;
+  }, [
+    selectedRouteTimeSectionId,
+    selectedRouteTimeSectionIds,
+    routeTimeSectionColorById,
+    routeTimeSectionsForSelectedSpeed,
+  ]);
   const activeSelectedNodeIds =
     selectedNodeIds.size > 0
       ? [...selectedNodeIds]
       : selectedNodeId
       ? [selectedNodeId]
       : [];
+  const clearRangeSelections = () => {
+    setSelectedRouteEdgeIds(new Set());
+    setSelectedRouteTimeSectionIds(new Set());
+  };
   const routeTimeDraftEndpointCount =
     routeTimeDraft?.ports.filter((portRef) => {
       const routeNode = routeNodeById.get(portRef.nodeId);
@@ -3009,18 +3522,52 @@ export const RouteNetworkEditor = ({
   const getConnectionRotationForSegment = (from: Point, to: Point) =>
     Math.abs(to.x - from.x) >= Math.abs(to.y - from.y) ? 0 : 90;
 
+  const getConnectionRotationForDragDirection = (
+    segment: { from: Point; to: Point; projected: Point },
+    directionPoint: Point
+  ) => {
+    const isHorizontal =
+      Math.abs(segment.to.x - segment.from.x) >=
+      Math.abs(segment.to.y - segment.from.y);
+    return isHorizontal
+      ? directionPoint.x >= segment.projected.x
+        ? 0
+        : 180
+      : directionPoint.y >= segment.projected.y
+      ? 90
+      : 270;
+  };
+
   const getConnectionTrackIndexForPoint = (
     rotation: number,
     projected: Point,
     point: Point
-  ) =>
-    rotation === 90 || rotation === 270
-      ? point.x >= projected.x
-        ? 1
-        : 0
-      : point.y >= projected.y
-      ? 0
-      : 1;
+  ) => {
+    const normalizedRotation = normalizeRotation(rotation, true);
+    if (normalizedRotation === 90) {
+      return point.x >= projected.x ? 1 : 0;
+    }
+    if (normalizedRotation === 270) {
+      return point.x >= projected.x ? 0 : 1;
+    }
+    if (normalizedRotation === 180) {
+      return point.y >= projected.y ? 1 : 0;
+    }
+    return point.y >= projected.y ? 0 : 1;
+  };
+
+  const getCrossoverTypeForParallelDirection = (
+    segment: { from: Point; to: Point; projected: Point },
+    directionPoint: Point
+  ): ConnectionType => {
+    const isHorizontal =
+      Math.abs(segment.to.x - segment.from.x) >=
+      Math.abs(segment.to.y - segment.from.y);
+    const positive = isHorizontal
+      ? directionPoint.x >= segment.projected.x
+      : directionPoint.y >= segment.projected.y;
+    return positive ? "singleCrossoverReverseZ" : "singleCrossoverZ";
+  };
 
   const getConnectionTrackIndexesForParallelEdges = (
     rotation: number,
@@ -3082,6 +3629,10 @@ export const RouteNetworkEditor = ({
       x: 0,
       y: 0,
       rotation,
+      isFlipped: false,
+      isTerminal: false,
+      isHorizontalTerminal: false,
+      isVerticalTerminal: false,
       platformNumber: "",
       platformCount: 1,
       platformLabels: ["1"],
@@ -3139,14 +3690,18 @@ export const RouteNetworkEditor = ({
           primarySegment.projected
         )
       : null;
-    const rotation = getConnectionRotationForSegment(
+    const baseRotation = getConnectionRotationForSegment(
       primarySegment.from,
       primarySegment.to
     );
+    const rotation =
+      secondarySegment && secondaryGeometry
+        ? baseRotation
+        : getConnectionRotationForDragDirection(primarySegment, directionPoint);
     const trackIndexes =
       secondarySegment && secondaryGeometry
         ? getConnectionTrackIndexesForParallelEdges(
-            rotation,
+            baseRotation,
             primarySegment.projected,
             secondarySegment.projected
           )
@@ -3160,7 +3715,7 @@ export const RouteNetworkEditor = ({
           };
     const connectionType: ConnectionType =
       secondaryGeometry && secondarySegment
-        ? "singleCrossoverZ"
+        ? getCrossoverTypeForParallelDirection(primarySegment, directionPoint)
         : getDefaultSingleEdgeConnectionType(trackIndexes.primaryIndex);
     const primarySplitPorts = getConnectionSplitPorts(
       connectionType,
@@ -3236,15 +3791,6 @@ export const RouteNetworkEditor = ({
     setSelectedBranchEdgeIds([]);
   };
 
-  const insertConnectionNodeOnSelectedRouteEdges = (
-    point: Point,
-    geometry: RouteEdgeGeometry
-  ) => {
-    const plan = getConnectionInsertPlan(point, point, geometry);
-    if (!plan) return;
-    commitConnectionInsertPlan(plan);
-  };
-
   const selectBranchEdgeForInsertion = (routeEdgeId: string) => {
     setSelectedBranchEdgeIds((current) => {
       if (current.includes(routeEdgeId)) {
@@ -3307,18 +3853,14 @@ export const RouteNetworkEditor = ({
           insertionEdgeIds.length > 0
             ? insertionEdgeIds
             : [geometry.routeEdgeId];
-        if (edgeIds.length === 1) {
-          setBranchInsertDragState({
-            routeEdgeId: edgeIds[0],
-            placementPoint: point,
-            currentPoint: point,
-          });
-          setDragState(null);
-          setSelectionState(null);
-          setConnectState(null);
-        } else {
-          insertConnectionNodeOnSelectedRouteEdges(point, geometry);
-        }
+        setBranchInsertDragState({
+          routeEdgeIds: edgeIds,
+          placementPoint: point,
+          currentPoint: point,
+        });
+        setDragState(null);
+        setSelectionState(null);
+        setConnectState(null);
       } else {
         addConnectionNodeAt(getSvgPoint(event));
       }
@@ -3375,15 +3917,8 @@ export const RouteNetworkEditor = ({
     return true;
   };
 
-  const maybeFlipConnectionNode = (
-    event: MouseEvent<Element>,
-    routeNode: RouteNode
-  ) => {
-    if (routeNode.type !== "connection" || !event.ctrlKey || !event.shiftKey) {
-      return false;
-    }
-    event.preventDefault();
-    event.stopPropagation();
+  const flipConnectionNodeShape = (routeNode: RouteNode) => {
+    if (routeNode.type !== "connection") return;
     const update = getFlippedConnectionUpdate(routeNode);
     if (Object.keys(update).length > 0) {
       dispatch({
@@ -3396,7 +3931,6 @@ export const RouteNetworkEditor = ({
     }
     setSelectedNodeId(routeNode.id);
     setSelectedNodeIds(new Set([routeNode.id]));
-    return true;
   };
 
   const getCanvasViewportCenter = () => {
@@ -3428,6 +3962,10 @@ export const RouteNetworkEditor = ({
       x: 0,
       y: 0,
       rotation: 0,
+      isFlipped: false,
+      isTerminal: false,
+      isHorizontalTerminal: false,
+      isVerticalTerminal: false,
       platformNumber: newNodePlatformNumber,
       platformCount: newNodePlatformCount,
       platformLabels: [],
@@ -3465,6 +4003,7 @@ export const RouteNetworkEditor = ({
     setSelectedNodeIds(new Set([nodeId]));
     setSelectedEdgeId("");
     setSelectedRouteTimeSectionId("");
+    clearRangeSelections();
   };
 
   const deleteSelection = () => {
@@ -3522,6 +4061,8 @@ export const RouteNetworkEditor = ({
       setSelectedNodeId("");
       setSelectedNodeIds(new Set());
       setSelectedEdgeId("");
+      setSelectedRouteTimeSectionId("");
+      clearRangeSelections();
       setConnectState(null);
       return;
     }
@@ -3532,6 +4073,7 @@ export const RouteNetworkEditor = ({
         payload: { id: selectedEdgeId },
       });
       setSelectedEdgeId("");
+      clearRangeSelections();
     }
   };
 
@@ -3712,6 +4254,7 @@ export const RouteNetworkEditor = ({
       },
     });
     setSelectedRouteTimeSectionId(routeTimeSectionId);
+    clearRangeSelections();
     setRouteTimeDraft(null);
     setRouteTimeDraftPast([]);
     setRouteTimeDraftFuture([]);
@@ -3939,15 +4482,16 @@ export const RouteNetworkEditor = ({
 
     if (branchInsertDragState) {
       const point = getSvgPoint(event);
-      const geometry = routeEdgeGeometryById.get(
-        branchInsertDragState.routeEdgeId
-      );
+      const primaryRouteEdgeId = branchInsertDragState.routeEdgeIds[0];
+      const geometry = primaryRouteEdgeId
+        ? routeEdgeGeometryById.get(primaryRouteEdgeId)
+        : null;
       if (geometry) {
         const plan = getConnectionInsertPlan(
           branchInsertDragState.placementPoint,
           point,
           geometry,
-          [branchInsertDragState.routeEdgeId]
+          branchInsertDragState.routeEdgeIds
         );
         if (plan) commitConnectionInsertPlan(plan);
       }
@@ -3970,10 +4514,39 @@ export const RouteNetworkEditor = ({
           )
           .map((routeNode) => routeNode.id)
       );
+      const nextSelectedRouteEdgeIds = new Set(
+        routeEdgeGeometry
+          .filter((geometry) =>
+            routePointsIntersectRect(geometry.routePoints, selectionRect)
+          )
+          .map((geometry) => geometry.routeEdgeId)
+      );
+      const nextSelectedRouteTimeSectionIds = new Set(
+        routeTimeSectionsForSelectedSpeed
+          .filter((section) => {
+            const labelPlacement = routeTimeLabelPlacementById.get(section.id);
+            const labelSelected = labelPlacement
+              ? rectsIntersect(
+                  selectionRect,
+                  getRouteTimeLabelRect(labelPlacement, 6)
+                )
+              : false;
+            return (
+              labelSelected ||
+              section.routeEdgeIds.some((routeEdgeId) =>
+                nextSelectedRouteEdgeIds.has(routeEdgeId)
+              )
+            );
+          })
+          .map((section) => section.id)
+      );
       setSelectedNodeIds(nextSelectedNodeIds);
       setSelectedNodeId([...nextSelectedNodeIds][0] ?? "");
+      setSelectedRouteEdgeIds(nextSelectedRouteEdgeIds);
+      setSelectedRouteTimeSectionIds(nextSelectedRouteTimeSectionIds);
       setSelectedEdgeId("");
       setSelectedBranchEdgeIds([]);
+      setSelectedRouteTimeSectionId("");
       setSelectionState(null);
     }
     setDragState(null);
@@ -4173,6 +4746,17 @@ export const RouteNetworkEditor = ({
     });
   };
 
+  const flipRouteNode = (routeNode: RouteNode) => {
+    if (routeNode.type === "connection") {
+      flipConnectionNodeShape(routeNode);
+      return;
+    }
+    dispatch({
+      type: "flipRouteNode",
+      payload: { id: routeNode.id },
+    });
+  };
+
   const onRotateNode = (
     event: MouseEvent<SVGGElement>,
     routeNode: RouteNode
@@ -4183,6 +4767,13 @@ export const RouteNetworkEditor = ({
     rotateRouteNodeClockwise(routeNode);
   };
 
+  const onFlipNode = (event: MouseEvent<SVGGElement>, routeNode: RouteNode) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isRouteTimeMode || isRouteTemplateMode) return;
+    flipRouteNode(routeNode);
+  };
+
   const removeRouteNode = (routeNodeId: string) => {
     dispatch({
       type: "removeRouteNode",
@@ -4191,6 +4782,8 @@ export const RouteNetworkEditor = ({
     setSelectedNodeId("");
     setSelectedNodeIds(new Set());
     setSelectedEdgeId("");
+    setSelectedRouteTimeSectionId("");
+    clearRangeSelections();
     setConnectState(null);
   };
 
@@ -4200,6 +4793,7 @@ export const RouteNetworkEditor = ({
       payload: { id: routeEdgeId },
     });
     setSelectedEdgeId("");
+    clearRangeSelections();
     setSelectedBranchEdgeIds((current) =>
       current.filter(
         (selectedRouteEdgeId) => selectedRouteEdgeId !== routeEdgeId
@@ -4231,6 +4825,7 @@ export const RouteNetworkEditor = ({
     setSelectedNodeId("");
     setSelectedNodeIds(new Set());
     setSelectedEdgeId("");
+    clearRangeSelections();
     setSelectedBranchEdgeIds([]);
     return true;
   };
@@ -4239,10 +4834,13 @@ export const RouteNetworkEditor = ({
     event: MouseEvent<SVGGElement>,
     routeNode: RouteNode
   ) => {
-    if (maybeFlipConnectionNode(event, routeNode)) return;
     if (!event.ctrlKey) return;
     event.preventDefault();
     event.stopPropagation();
+    if (selectedNodeIds.size > 1 && selectedNodeIds.has(routeNode.id)) {
+      deleteSelection();
+      return;
+    }
     removeRouteNode(routeNode.id);
   };
 
@@ -4371,6 +4969,8 @@ export const RouteNetworkEditor = ({
       setSelectedNodeId("");
       setSelectedNodeIds(new Set());
       setSelectedEdgeId("");
+      setSelectedRouteTimeSectionId("");
+      clearRangeSelections();
     }
     setConnectState(null);
   };
@@ -4389,6 +4989,7 @@ export const RouteNetworkEditor = ({
     setSelectedNodeIds(new Set([routeNode.id]));
     setSelectedEdgeId("");
     setSelectedRouteTimeSectionId("");
+    clearRangeSelections();
   };
 
   const selectedTrainRouteNodeIds = new Set(
@@ -4397,7 +4998,9 @@ export const RouteNetworkEditor = ({
   const portColorByKey = useMemo(() => {
     const colorMap = new Map<string, string>();
     state.routeEdges.forEach((routeEdge) => {
-      const color = getEdgeStrokeColor(routeEdge.id, selectedEdgeId);
+      const color = selectedRouteEdgeIds.has(routeEdge.id)
+        ? "#dc2626"
+        : getEdgeStrokeColor(routeEdge.id, selectedEdgeId);
       colorMap.set(
         `${routeEdge.fromNodeId}:${routeEdge.fromPortSide}:${routeEdge.fromPortIndex}`,
         color
@@ -4408,7 +5011,7 @@ export const RouteNetworkEditor = ({
       );
     });
     return colorMap;
-  }, [selectedEdgeId, state.routeEdges]);
+  }, [selectedEdgeId, selectedRouteEdgeIds, state.routeEdges]);
   const occupiedPortKeys = useMemo(() => {
     const keys = new Set<string>();
     state.routeEdges.forEach((routeEdge) => {
@@ -4458,6 +5061,10 @@ export const RouteNetworkEditor = ({
               onMouseLeave={onSvgMouseUp}
               onContextMenu={(event) => {
                 event.preventDefault();
+                if (event.ctrlKey && activeSelectedNodeIds.length > 0) {
+                  event.stopPropagation();
+                  deleteSelection();
+                }
               }}
               onClick={() => {
                 if (isRouteTemplateMode) return;
@@ -4468,6 +5075,8 @@ export const RouteNetworkEditor = ({
                 setSelectedNodeId("");
                 setSelectedNodeIds(new Set());
                 setSelectedEdgeId("");
+                setSelectedRouteTimeSectionId("");
+                clearRangeSelections();
               }}
             >
               <defs>
@@ -4482,6 +5091,7 @@ export const RouteNetworkEditor = ({
                     fill="none"
                     stroke="#e2e8f0"
                     strokeWidth={0.6}
+                    className="canvas-grid-line-minor"
                   />
                 </pattern>
                 <pattern
@@ -4494,6 +5104,7 @@ export const RouteNetworkEditor = ({
                     width={layoutGridSize * 4}
                     height={layoutGridSize * 4}
                     fill="url(#route-layout-grid)"
+                    className="canvas-grid-pattern"
                   />
                   <path
                     d={`M ${layoutGridSize * 4} 0 L 0 0 0 ${
@@ -4502,6 +5113,7 @@ export const RouteNetworkEditor = ({
                     fill="none"
                     stroke="#cbd5e1"
                     strokeWidth={0.8}
+                    className="canvas-grid-line-major"
                   />
                 </pattern>
                 <marker
@@ -4521,10 +5133,14 @@ export const RouteNetworkEditor = ({
                 height={canvasHeight}
                 fill="url(#route-layout-grid-major)"
                 pointerEvents="none"
+                className="canvas-grid-pattern"
               />
 
               {routeEdgeGeometry.map((geometry) => {
                 const isSelected = geometry.routeEdgeId === selectedEdgeId;
+                const isRangeSelected = selectedRouteEdgeIds.has(
+                  geometry.routeEdgeId
+                );
                 const isBranchSelected = selectedBranchEdgeIdSet.has(
                   geometry.routeEdgeId
                 );
@@ -4537,8 +5153,18 @@ export const RouteNetworkEditor = ({
                     <path
                       d={pointsToPath(geometry.routePoints)}
                       fill="none"
-                      stroke={isBranchSelected ? "#f59e0b" : edgeStrokeColor}
-                      strokeWidth={isSelected || isBranchSelected ? 5 : 3}
+                      stroke={
+                        isRangeSelected
+                          ? "#dc2626"
+                          : isBranchSelected
+                          ? "#f59e0b"
+                          : edgeStrokeColor
+                      }
+                      strokeWidth={
+                        isSelected || isBranchSelected || isRangeSelected
+                          ? 5
+                          : 3
+                      }
                       markerEnd={
                         geometry.bidirectional ? undefined : "url(#route-arrow)"
                       }
@@ -4561,6 +5187,7 @@ export const RouteNetworkEditor = ({
                         setSelectedNodeId("");
                         setSelectedNodeIds(new Set());
                         setSelectedRouteTimeSectionId("");
+                        clearRangeSelections();
                       }}
                       onMouseDown={(event) => {
                         maybeHandleBranchEdgeMouseDown(event, geometry);
@@ -4568,14 +5195,53 @@ export const RouteNetworkEditor = ({
                       onContextMenu={(event) =>
                         onEdgeContextMenu(event, geometry.routeEdgeId)
                       }
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${
+                        isSelected || isRangeSelected
+                          ? "canvas-selected-stroke"
+                          : "canvas-invert"
+                      }`}
+                    />
+                    <path
+                      d={pointsToPath(geometry.routePoints)}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={18}
+                      pointerEvents="stroke"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (isRouteTimeMode || isRouteTemplateMode) return;
+                        if (movedRef.current) {
+                          movedRef.current = false;
+                          return;
+                        }
+                        if (connectState) return;
+                        if (
+                          selectRouteTimeSectionFromRouteEdge(
+                            geometry.routeEdgeId
+                          )
+                        ) {
+                          return;
+                        }
+                        setSelectedEdgeId("");
+                        setSelectedNodeId("");
+                        setSelectedNodeIds(new Set());
+                        setSelectedRouteTimeSectionId("");
+                        clearRangeSelections();
+                      }}
+                      onMouseDown={(event) => {
+                        maybeHandleBranchEdgeMouseDown(event, geometry);
+                      }}
+                      onContextMenu={(event) =>
+                        onEdgeContextMenu(event, geometry.routeEdgeId)
+                      }
+                      className="canvas-invert cursor-pointer"
                     />
                   </g>
                 );
               })}
 
               {routeTimeSectionsForSelectedSpeed.map((section) => {
-                const sectionColor = getRouteTimeSectionColor(section);
+                const sectionColor = getDisplayRouteTimeSectionColor(section);
                 const geometries = section.routeEdgeIds.flatMap(
                   (routeEdgeId) => {
                     const geometry = routeEdgeGeometryById.get(routeEdgeId);
@@ -4583,6 +5249,11 @@ export const RouteNetworkEditor = ({
                   }
                 );
                 const isSelected = section.id === selectedRouteTimeSectionId;
+                const isRangeSelected = selectedRouteTimeSectionIds.has(
+                  section.id
+                );
+                const displaySectionColor =
+                  isSelected || isRangeSelected ? "#dc2626" : sectionColor;
                 const labelText = `${section.travelMinutes}分`;
                 const labelPlacement =
                   section.travelMinutes > 0
@@ -4591,32 +5262,106 @@ export const RouteNetworkEditor = ({
                 return (
                   <g key={section.id}>
                     {geometries.map((geometry) => (
-                      <path
-                        key={`${section.id}-${geometry.routeEdgeId}`}
-                        d={pointsToPath(geometry.routePoints)}
-                        fill="none"
-                        stroke={sectionColor}
-                        strokeOpacity={isSelected ? 0.92 : 0.66}
-                        strokeWidth={isSelected ? 9 : 7}
-                        strokeLinecap="round"
-                        pointerEvents="stroke"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (isRouteTemplateMode || isRouteTimeMode) return;
-                          if (movedRef.current) {
-                            movedRef.current = false;
-                            return;
+                      <g key={`${section.id}-${geometry.routeEdgeId}`}>
+                        <path
+                          d={pointsToPath(geometry.routePoints)}
+                          fill="none"
+                          stroke={displaySectionColor}
+                          strokeOpacity={
+                            isSelected || isRangeSelected ? 0.92 : 0.66
                           }
-                          selectRouteTimeSectionFromRouteEdge(
-                            geometry.routeEdgeId,
-                            section.id
+                          strokeWidth={isSelected || isRangeSelected ? 9 : 7}
+                          strokeLinecap="round"
+                          pointerEvents="stroke"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (isRouteTemplateMode || isRouteTimeMode) return;
+                            if (movedRef.current) {
+                              movedRef.current = false;
+                              return;
+                            }
+                            selectRouteTimeSectionFromRouteEdge(
+                              geometry.routeEdgeId,
+                              section.id
+                            );
+                          }}
+                          onMouseDown={(event) => {
+                            maybeHandleBranchEdgeMouseDown(event, geometry);
+                          }}
+                          onContextMenu={(event) =>
+                            onEdgeContextMenu(event, geometry.routeEdgeId)
+                          }
+                          className={`cursor-pointer ${
+                            isSelected || isRangeSelected
+                              ? "canvas-selected-stroke"
+                              : "canvas-invert"
+                          }`}
+                        />
+                        {(() => {
+                          const routeEdge = routeEdgeById.get(
+                            geometry.routeEdgeId
                           );
-                        }}
-                        onMouseDown={(event) => {
-                          maybeHandleBranchEdgeMouseDown(event, geometry);
-                        }}
-                        className="cursor-pointer"
-                      />
+                          if (!routeEdge) return null;
+                          return getRouteTimeFlowRoutePoints(
+                            section,
+                            routeEdge,
+                            geometry
+                          ).map((routePoints, flowIndex) => (
+                            <path
+                              key={`flow-${flowIndex}`}
+                              d={pointsToPath(routePoints)}
+                              fill="none"
+                              stroke="#ffffff"
+                              strokeOpacity={
+                                isSelected || isRangeSelected ? 0.82 : 0.62
+                              }
+                              strokeWidth={2.2}
+                              strokeLinecap="round"
+                              strokeDasharray={routeTimeFlowDasharray}
+                              pointerEvents="none"
+                              className="canvas-flow-effect-stroke"
+                            >
+                              <animate
+                                attributeName="stroke-dashoffset"
+                                values={routeTimeFlowDashoffsetValues}
+                                dur={
+                                  isSelected || isRangeSelected
+                                    ? "0.9s"
+                                    : "1.3s"
+                                }
+                                repeatCount="indefinite"
+                              />
+                            </path>
+                          ));
+                        })()}
+                        <path
+                          d={pointsToPath(geometry.routePoints)}
+                          fill="none"
+                          stroke="transparent"
+                          strokeWidth={20}
+                          strokeLinecap="round"
+                          pointerEvents="stroke"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (isRouteTemplateMode || isRouteTimeMode) return;
+                            if (movedRef.current) {
+                              movedRef.current = false;
+                              return;
+                            }
+                            selectRouteTimeSectionFromRouteEdge(
+                              geometry.routeEdgeId,
+                              section.id
+                            );
+                          }}
+                          onMouseDown={(event) => {
+                            maybeHandleBranchEdgeMouseDown(event, geometry);
+                          }}
+                          onContextMenu={(event) =>
+                            onEdgeContextMenu(event, geometry.routeEdgeId)
+                          }
+                          className="cursor-pointer"
+                        />
+                      </g>
                     ))}
                     {labelPlacement ? (
                       <g pointerEvents="none">
@@ -4627,14 +5372,33 @@ export const RouteNetworkEditor = ({
                           height={labelPlacement.height}
                           rx={4}
                           fill="#ffffff"
-                          fillOpacity={0.86}
+                          fillOpacity={isSelected ? 0.98 : 0.86}
+                          stroke={
+                            isSelected || isRangeSelected
+                              ? displaySectionColor
+                              : "transparent"
+                          }
+                          strokeWidth={isSelected || isRangeSelected ? 2 : 0}
+                          className={
+                            isSelected || isRangeSelected
+                              ? "canvas-selected-label-box"
+                              : "canvas-invert"
+                          }
                         />
                         <text
                           x={labelPlacement.x}
                           y={labelPlacement.y + 5}
                           textAnchor="middle"
-                          fill={sectionColor}
-                          className="text-[13px] font-bold"
+                          fill={displaySectionColor}
+                          className={`font-bold ${
+                            isSelected || isRangeSelected
+                              ? "text-[14px]"
+                              : "text-[13px]"
+                          } ${
+                            isSelected || isRangeSelected
+                              ? "canvas-selected-fill"
+                              : "canvas-invert"
+                          }`}
                         >
                           {labelText}
                         </text>
@@ -4658,6 +5422,7 @@ export const RouteNetworkEditor = ({
                             strokeOpacity={0.9}
                             strokeWidth={9}
                             strokeLinecap="round"
+                            className="canvas-invert"
                           />,
                         ]
                       : [];
@@ -4680,22 +5445,24 @@ export const RouteNetworkEditor = ({
                         fill={index === 0 ? "#2563eb" : "#f97316"}
                         stroke="#ffffff"
                         strokeWidth={3}
+                        className="canvas-invert"
                       />
                     );
                   })}
                 </g>
               ) : null}
 
-              {trainRouteGeometries.map((geometry) => (
+              {trainRouteGeometryHighlights.map((highlight) => (
                 <path
-                  key={`train-route-${geometry.routeEdgeId}`}
-                  d={pointsToPath(geometry.routePoints)}
+                  key={`train-route-${highlight.key}`}
+                  d={pointsToPath(highlight.geometry.routePoints)}
                   fill="none"
-                  stroke="#7c3aed"
+                  stroke={highlight.color}
                   strokeWidth={7}
                   strokeOpacity={0.35}
                   strokeLinecap="round"
                   pointerEvents="none"
+                  className="canvas-invert"
                 />
               ))}
 
@@ -4712,6 +5479,7 @@ export const RouteNetworkEditor = ({
                   strokeWidth={7}
                   strokeOpacity={0.35}
                   pointerEvents="none"
+                  className="canvas-invert"
                 />
               ))}
 
@@ -4728,6 +5496,7 @@ export const RouteNetworkEditor = ({
                         strokeOpacity={0.86}
                         strokeLinecap="round"
                         pointerEvents="none"
+                        className="canvas-invert"
                       />,
                     ]
                   : [];
@@ -4735,15 +5504,17 @@ export const RouteNetworkEditor = ({
 
               {branchInsertDragState
                 ? (() => {
-                    const geometry = routeEdgeGeometryById.get(
-                      branchInsertDragState.routeEdgeId
-                    );
+                    const primaryRouteEdgeId =
+                      branchInsertDragState.routeEdgeIds[0];
+                    const geometry = primaryRouteEdgeId
+                      ? routeEdgeGeometryById.get(primaryRouteEdgeId)
+                      : null;
                     if (!geometry) return null;
                     const plan = getConnectionInsertPlan(
                       branchInsertDragState.placementPoint,
                       branchInsertDragState.currentPoint,
                       geometry,
-                      [branchInsertDragState.routeEdgeId]
+                      branchInsertDragState.routeEdgeIds
                     );
                     if (!plan) return null;
                     const draftNode: RouteNode = {
@@ -4754,6 +5525,10 @@ export const RouteNetworkEditor = ({
                       x: plan.x,
                       y: plan.y,
                       rotation: plan.rotation,
+                      isFlipped: false,
+                      isTerminal: false,
+                      isHorizontalTerminal: false,
+                      isVerticalTerminal: false,
                       platformNumber: "",
                       platformCount: 1,
                       platformLabels: ["1"],
@@ -4773,6 +5548,7 @@ export const RouteNetworkEditor = ({
                               stroke="#f59e0b"
                               strokeWidth={7}
                               strokeLinecap="round"
+                              className="canvas-invert"
                             />
                           )
                         )}
@@ -4791,6 +5567,7 @@ export const RouteNetworkEditor = ({
                               fill="#f59e0b"
                               stroke="#ffffff"
                               strokeWidth={2}
+                              className="canvas-invert"
                             />
                           );
                         })}
@@ -4924,7 +5701,9 @@ export const RouteNetworkEditor = ({
                 const isInSelectedTrain = selectedTrainRouteNodeIds.has(
                   routeNode.id
                 );
-                const isCandidate = connectedCandidateIds.has(routeNode.id);
+                const isCandidate =
+                  isRouteTemplateMode &&
+                  connectedCandidateIds.has(routeNode.id);
                 const stopTimeGroups = [
                   ...(stopTimesByRouteNodeId.get(routeNode.id)?.entries() ??
                     []),
@@ -4939,14 +5718,62 @@ export const RouteNetworkEditor = ({
                 const routeNodeHeight = getNodeHeight(routeNode);
                 const portRefs = getRouteNodePortRefs(routeNode);
                 const layout = getNodeLayoutInfo(routeNode);
+                const shouldRotateNodeText =
+                  routeNode.type !== "connection" && isVerticalNode(routeNode);
+                const nodeLabelText = getRouteNodeLabel(
+                  state.stations,
+                  routeNode
+                );
+                const nodeSubLabelText = `${
+                  routeNodeTypeLabels[routeNode.type]
+                }${routeNode.rotation ? ` / ${routeNode.rotation}°` : ""}`;
+                const nodeTextMaxLength = Math.max(
+                  24,
+                  shouldRotateNodeText
+                    ? routeNodeHeight - 28
+                    : layout.labelBoxWidth - 22
+                );
+                const nodeTextTransform = shouldRotateNodeText
+                  ? `matrix(0 1 -1 0 ${Math.max(24, routeNodeWidth - 16)} 18)`
+                  : undefined;
                 const routeTemplatePlatformRegions =
                   getRouteTemplatePlatformRegions(routeNode);
+                const nodeFillClassName = `canvas-invert canvas-node-fill canvas-node-fill-${
+                  routeNode.type
+                }${isCandidate ? " canvas-node-fill-candidate" : ""}`;
+                const nodeBorderClassName = isSelected
+                  ? "canvas-selected-stroke"
+                  : isInSelectedTrain
+                  ? "canvas-selected-train-stroke"
+                  : "canvas-fixed-light-stroke";
                 const rotateButtonPosition = rotateButtonPositionByNodeId.get(
                   routeNode.id
                 ) ?? {
                   x: routeNodeWidth / 2,
                   y: -24,
                 };
+                const actionButtonOffset = rotateButtonRadius + 5;
+                const placeActionButtonsVertically =
+                  rotateButtonPosition.x < 0 ||
+                  rotateButtonPosition.x > routeNodeWidth;
+                const rotateActionButtonPosition = placeActionButtonsVertically
+                  ? {
+                      x: rotateButtonPosition.x,
+                      y: rotateButtonPosition.y - actionButtonOffset,
+                    }
+                  : {
+                      x: rotateButtonPosition.x - actionButtonOffset,
+                      y: rotateButtonPosition.y,
+                    };
+                const flipButtonPosition = placeActionButtonsVertically
+                  ? {
+                      x: rotateButtonPosition.x,
+                      y: rotateButtonPosition.y + actionButtonOffset,
+                    }
+                  : {
+                      x: rotateButtonPosition.x + actionButtonOffset,
+                      y: rotateButtonPosition.y,
+                    };
                 return (
                   <g
                     key={routeNode.id}
@@ -4967,6 +5794,12 @@ export const RouteNetworkEditor = ({
                           getConnectionDrawableSegments(routeNode);
                         return (
                           <>
+                            <rect
+                              width={routeNodeWidth}
+                              height={routeNodeHeight}
+                              fill="transparent"
+                              pointerEvents="all"
+                            />
                             {segments.map((segment, segmentIndex) => {
                               const from = {
                                 x: segment.from.x - routeNode.x,
@@ -4984,48 +5817,138 @@ export const RouteNetworkEditor = ({
                                   stroke={isSelected ? "#dc2626" : "#64748b"}
                                   strokeWidth={isSelected ? 5 : 4}
                                   strokeLinecap="round"
+                                  className={
+                                    isSelected
+                                      ? "canvas-selected-stroke"
+                                      : "canvas-invert"
+                                  }
                                 />
                               );
                             })}
-                            {state.routeTimeSections.flatMap((section) =>
-                              getConnectionInternalSegmentsFromPorts(
-                                routeNode,
-                                section.routePorts
-                              ).map((segment, segmentIndex) => {
-                                const from = {
-                                  x: segment.from.x - routeNode.x,
-                                  y: segment.from.y - routeNode.y,
-                                };
-                                const to = {
-                                  x: segment.to.x - routeNode.x,
-                                  y: segment.to.y - routeNode.y,
-                                };
+                            {routeTimeSectionsForSelectedSpeed.flatMap(
+                              (section) => {
                                 const isSectionSelected =
                                   section.id === selectedRouteTimeSectionId;
+                                const isSectionRangeSelected =
+                                  selectedRouteTimeSectionIds.has(section.id);
                                 const sectionColor =
-                                  getRouteTimeSectionColor(section);
-                                return (
-                                  <path
-                                    key={`${section.id}-${segmentIndex}`}
-                                    d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
-                                    fill="none"
-                                    stroke={sectionColor}
-                                    strokeOpacity={
-                                      isSectionSelected ? 0.92 : 0.72
+                                  getDisplayRouteTimeSectionColor(section);
+                                const displaySectionColor =
+                                  isSectionSelected || isSectionRangeSelected
+                                    ? "#dc2626"
+                                    : sectionColor;
+                                const toLocalSegment = (segment: {
+                                  from: Point;
+                                  to: Point;
+                                }) => ({
+                                  from: {
+                                    x: segment.from.x - routeNode.x,
+                                    y: segment.from.y - routeNode.y,
+                                  },
+                                  to: {
+                                    x: segment.to.x - routeNode.x,
+                                    y: segment.to.y - routeNode.y,
+                                  },
+                                });
+                                const baseSegments =
+                                  getConnectionInternalSegmentsFromPorts(
+                                    routeNode,
+                                    section.routePorts
+                                  );
+                                const flowSegments =
+                                  getRouteTimeConnectionFlowSegments(
+                                    routeNode,
+                                    section
+                                  );
+                                return [
+                                  ...baseSegments.map(
+                                    (segment, segmentIndex) => {
+                                      const localSegment =
+                                        toLocalSegment(segment);
+                                      return (
+                                        <path
+                                          key={`${section.id}-${segmentIndex}`}
+                                          d={`M ${localSegment.from.x} ${localSegment.from.y} L ${localSegment.to.x} ${localSegment.to.y}`}
+                                          fill="none"
+                                          stroke={displaySectionColor}
+                                          strokeOpacity={
+                                            isSectionSelected ||
+                                            isSectionRangeSelected
+                                              ? 0.92
+                                              : 0.72
+                                          }
+                                          strokeWidth={
+                                            isSectionSelected ||
+                                            isSectionRangeSelected
+                                              ? 9
+                                              : 7
+                                          }
+                                          strokeLinecap="round"
+                                          className={
+                                            isSectionSelected ||
+                                            isSectionRangeSelected
+                                              ? "canvas-selected-stroke"
+                                              : "canvas-invert"
+                                          }
+                                        />
+                                      );
                                     }
-                                    strokeWidth={isSectionSelected ? 9 : 7}
-                                    strokeLinecap="round"
-                                  />
-                                );
-                              })
+                                  ),
+                                  ...flowSegments.map(
+                                    (segment, segmentIndex) => {
+                                      const localSegment =
+                                        toLocalSegment(segment);
+                                      return (
+                                        <path
+                                          key={`${section.id}-flow-${segmentIndex}`}
+                                          d={`M ${localSegment.from.x} ${localSegment.from.y} L ${localSegment.to.x} ${localSegment.to.y}`}
+                                          fill="none"
+                                          stroke="#ffffff"
+                                          strokeOpacity={
+                                            isSectionSelected ||
+                                            isSectionRangeSelected
+                                              ? 0.82
+                                              : 0.62
+                                          }
+                                          strokeWidth={2.2}
+                                          strokeLinecap="round"
+                                          strokeDasharray={
+                                            routeTimeFlowDasharray
+                                          }
+                                          pointerEvents="none"
+                                          className="canvas-flow-effect-stroke"
+                                        >
+                                          <animate
+                                            attributeName="stroke-dashoffset"
+                                            values={
+                                              routeTimeFlowDashoffsetValues
+                                            }
+                                            dur={
+                                              isSectionSelected ||
+                                              isSectionRangeSelected
+                                                ? "0.9s"
+                                                : "1.3s"
+                                            }
+                                            repeatCount="indefinite"
+                                          />
+                                        </path>
+                                      );
+                                    }
+                                  ),
+                                ];
+                              }
                             )}
                             {highlightedRouteSections.flatMap(
                               (routeSection) => {
-                                const section = state.routeTimeSections.find(
-                                  (candidate) =>
-                                    candidate.id ===
+                                const section =
+                                  routeTimeSectionByIdForSelectedSpeed.get(
                                     routeSection.routeTimeSectionId
-                                );
+                                  ) ??
+                                  state.routeTimeSections.find(
+                                    (candidate) =>
+                                      candidate.id ===
+                                      routeSection.routeTimeSectionId
+                                  );
                                 if (!section) return [];
                                 const routePorts = routeSection.reversed
                                   ? [...section.routePorts].reverse()
@@ -5047,10 +5970,13 @@ export const RouteNetworkEditor = ({
                                       key={`train-route-${section.id}-${segmentIndex}`}
                                       d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
                                       fill="none"
-                                      stroke="#7c3aed"
+                                      stroke={getDisplayRouteTimeSectionColor(
+                                        section
+                                      )}
                                       strokeOpacity={0.5}
                                       strokeWidth={7}
                                       strokeLinecap="round"
+                                      className="canvas-invert"
                                     />
                                   );
                                 });
@@ -5101,6 +6027,7 @@ export const RouteNetworkEditor = ({
                             isCandidate ? "#dbeafe" : nodeColors[routeNode.type]
                           }
                           stroke="none"
+                          className={nodeFillClassName}
                         />
                         <rect
                           x={
@@ -5120,6 +6047,7 @@ export const RouteNetworkEditor = ({
                             isCandidate ? "#dbeafe" : nodeColors[routeNode.type]
                           }
                           stroke="none"
+                          className={nodeFillClassName}
                         />
                         <rect
                           width={routeNodeWidth}
@@ -5136,25 +6064,39 @@ export const RouteNetworkEditor = ({
                           strokeWidth={
                             isSelected || isInSelectedTrain ? 3 : 1.5
                           }
+                          className={nodeBorderClassName}
                         />
                       </>
                     ) : (
-                      <rect
-                        width={routeNodeWidth}
-                        height={routeNodeHeight}
-                        rx={3}
-                        fill={
-                          isCandidate ? "#dbeafe" : nodeColors[routeNode.type]
-                        }
-                        stroke={
-                          isSelected
-                            ? "#dc2626"
-                            : isInSelectedTrain
-                            ? "#7c3aed"
-                            : "#334155"
-                        }
-                        strokeWidth={isSelected || isInSelectedTrain ? 3 : 1.5}
-                      />
+                      <>
+                        <rect
+                          width={routeNodeWidth}
+                          height={routeNodeHeight}
+                          rx={3}
+                          fill={
+                            isCandidate ? "#dbeafe" : nodeColors[routeNode.type]
+                          }
+                          stroke="none"
+                          className={nodeFillClassName}
+                        />
+                        <rect
+                          width={routeNodeWidth}
+                          height={routeNodeHeight}
+                          rx={3}
+                          fill="none"
+                          stroke={
+                            isSelected
+                              ? "#dc2626"
+                              : isInSelectedTrain
+                              ? "#7c3aed"
+                              : "#334155"
+                          }
+                          strokeWidth={
+                            isSelected || isInSelectedTrain ? 3 : 1.5
+                          }
+                          className={nodeBorderClassName}
+                        />
+                      </>
                     )}
                     {isRouteTemplateMode && routeNode.type !== "connection" ? (
                       <g>
@@ -5256,29 +6198,45 @@ export const RouteNetworkEditor = ({
                         fill="#ffffff"
                         stroke="#cbd5e1"
                         strokeWidth={1}
+                        className="canvas-invert"
                       />
                     ) : null}
                     {routeNode.type !== "connection" ? (
+                      <g>
+                        <text
+                          x={shouldRotateNodeText ? 0 : layout.labelX}
+                          y={shouldRotateNodeText ? 0 : layout.labelY}
+                          transform={nodeTextTransform}
+                          fill="#111827"
+                          className="canvas-fixed-light-fill pointer-events-none text-[13px]"
+                          {...getTextFitProps(
+                            nodeLabelText,
+                            13,
+                            nodeTextMaxLength
+                          )}
+                        >
+                          {nodeLabelText}
+                        </text>
+                        <text
+                          x={shouldRotateNodeText ? 0 : layout.labelX}
+                          y={shouldRotateNodeText ? 17 : layout.subLabelY}
+                          transform={nodeTextTransform}
+                          fill="#6b7280"
+                          className="canvas-fixed-light-fill pointer-events-none text-[11px]"
+                          {...getTextFitProps(
+                            nodeSubLabelText,
+                            11,
+                            nodeTextMaxLength
+                          )}
+                        >
+                          {nodeSubLabelText}
+                        </text>
+                      </g>
+                    ) : null}
+                    {routeNode.type !== "connection" ? (
                       <>
-                        <text
-                          x={layout.labelX}
-                          y={layout.labelY}
-                          className="pointer-events-none fill-gray-900 text-[13px]"
-                        >
-                          {getRouteNodeLabel(state.stations, routeNode)}
-                        </text>
-                        <text
-                          x={layout.labelX}
-                          y={layout.subLabelY}
-                          className="pointer-events-none fill-gray-500 text-[11px]"
-                        >
-                          {routeNodeTypeLabels[routeNode.type]}
-                          {routeNode.rotation
-                            ? ` / ${routeNode.rotation}°`
-                            : ""}
-                        </text>
                         <g
-                          transform={`translate(${rotateButtonPosition.x}, ${rotateButtonPosition.y})`}
+                          transform={`translate(${rotateActionButtonPosition.x}, ${rotateActionButtonPosition.y})`}
                           onMouseDown={(event) =>
                             onRotateNode(event, routeNode)
                           }
@@ -5291,14 +6249,40 @@ export const RouteNetworkEditor = ({
                             fill="#ffffff"
                             stroke="#475569"
                             strokeWidth={1.5}
+                            className="canvas-fixed-light-button"
                           />
                           <text
                             x={0}
                             y={4}
                             textAnchor="middle"
-                            className="pointer-events-none fill-slate-700 text-[13px]"
+                            fill="#334155"
+                            className="canvas-fixed-light-fill pointer-events-none text-[13px]"
                           >
                             ↻
+                          </text>
+                        </g>
+                        <g
+                          transform={`translate(${flipButtonPosition.x}, ${flipButtonPosition.y})`}
+                          onMouseDown={(event) => onFlipNode(event, routeNode)}
+                          className="cursor-pointer"
+                        >
+                          <circle
+                            cx={0}
+                            cy={0}
+                            r={rotateButtonRadius}
+                            fill="#ffffff"
+                            stroke="#475569"
+                            strokeWidth={1.5}
+                            className="canvas-fixed-light-button"
+                          />
+                          <text
+                            x={0}
+                            y={4}
+                            textAnchor="middle"
+                            fill="#334155"
+                            className="canvas-fixed-light-fill pointer-events-none text-[13px]"
+                          >
+                            ⇄
                           </text>
                         </g>
                       </>
@@ -5324,6 +6308,11 @@ export const RouteNetworkEditor = ({
                       const isDraftPort = routeTimeDraft?.ports.some(
                         (draftPortRef) =>
                           getPortRefKey(draftPortRef) === portKey
+                      );
+                      const highlightedRouteTimeEndpointColor =
+                        highlightedRouteTimeEndpointColorByKey.get(portKey);
+                      const isHighlightedRouteTimeEndpoint = Boolean(
+                        highlightedRouteTimeEndpointColor
                       );
                       const isSectionEndpoint = state.routeTimeSections.some(
                         (section) =>
@@ -5353,6 +6342,18 @@ export const RouteNetworkEditor = ({
                         : isSectionEndpoint
                         ? "#16a34a"
                         : "#2563eb";
+                      const visiblePortFill = isHighlightedRouteTimeEndpoint
+                        ? highlightedRouteTimeEndpointColor
+                        : isRouteTimeMode
+                        ? routeTimePortFill
+                        : isOccupied
+                        ? portColor
+                        : "#ffffff";
+                      const visiblePortStroke = isHighlightedRouteTimeEndpoint
+                        ? highlightedRouteTimeEndpointColor
+                        : isRouteTimeMode
+                        ? routeTimePortStroke
+                        : portColor;
                       const platformLabel =
                         routeNode.type === "crossing" &&
                         (portRef.side === "top" || portRef.side === "bottom")
@@ -5386,27 +6387,21 @@ export const RouteNetworkEditor = ({
                           : platformLabelAnchor === "end"
                           ? labelX - platformLabelWidth + 3
                           : labelX - 3;
+                      const platformLabelRectY = labelY - 13;
+                      const platformLabelRectHeight = 17;
+                      const platformLabelTextX =
+                        platformLabelRectX + platformLabelWidth / 2;
+                      const platformLabelTextY =
+                        platformLabelRectY + platformLabelRectHeight / 2;
                       return (
                         <g key={`${portRef.side}-${portRef.index}`}>
                           <circle
                             cx={localX}
                             cy={localY}
                             r={currentPortRadius}
-                            fill={
-                              portVisible
-                                ? isRouteTimeMode
-                                  ? routeTimePortFill
-                                  : isOccupied
-                                  ? portColor
-                                  : "#ffffff"
-                                : "transparent"
-                            }
+                            fill={portVisible ? visiblePortFill : "transparent"}
                             stroke={
-                              portVisible
-                                ? isRouteTimeMode
-                                  ? routeTimePortStroke
-                                  : portColor
-                                : "transparent"
+                              portVisible ? visiblePortStroke : "transparent"
                             }
                             strokeWidth={
                               portVisible ? (isRouteTimeMode ? 3 : 2) : 0
@@ -5428,25 +6423,52 @@ export const RouteNetworkEditor = ({
                                 portRef.index
                               )
                             }
-                            className="cursor-crosshair"
+                            className={
+                              isHighlightedRouteTimeEndpoint
+                                ? "canvas-selected-port cursor-crosshair"
+                                : portVisible &&
+                                  !isOccupied &&
+                                  !isDraftPort &&
+                                  !isSectionEndpoint
+                                ? "canvas-open-port cursor-crosshair"
+                                : portVisible
+                                ? "canvas-fixed-white-port cursor-crosshair"
+                                : "cursor-crosshair"
+                            }
                           />
                           {routeNode.type !== "connection" ? (
                             <>
                               <rect
                                 x={platformLabelRectX}
-                                y={labelY - 13}
+                                y={platformLabelRectY}
                                 width={platformLabelWidth}
-                                height={17}
+                                height={platformLabelRectHeight}
                                 rx={3}
                                 fill="#ffffff"
-                                fillOpacity={0.86}
+                                fillOpacity={
+                                  isHighlightedRouteTimeEndpoint ? 0.98 : 0.86
+                                }
+                                stroke={
+                                  highlightedRouteTimeEndpointColor ??
+                                  "transparent"
+                                }
+                                strokeWidth={
+                                  isHighlightedRouteTimeEndpoint ? 1.8 : 0
+                                }
                                 pointerEvents="none"
+                                className={
+                                  isHighlightedRouteTimeEndpoint
+                                    ? "canvas-selected-label-box"
+                                    : "canvas-invert"
+                                }
                               />
                               <text
-                                x={labelX}
-                                y={labelY}
-                                textAnchor={platformLabelAnchor}
-                                className="pointer-events-none fill-slate-700 text-[13px] font-bold"
+                                x={platformLabelTextX}
+                                y={platformLabelTextY}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fill="#334155"
+                                className="canvas-fixed-light-fill pointer-events-none text-[13px] font-bold"
                               >
                                 {platformLabel}
                               </text>
@@ -5504,13 +6526,15 @@ export const RouteNetworkEditor = ({
                             rx={4}
                             fill="#ffffff"
                             fillOpacity={0.86}
+                            className="canvas-invert"
                           />
                           {headerText ? (
                             <text
                               x={0}
                               y={0}
                               textAnchor={position.textAnchor}
-                              className="fill-slate-700 text-[11px] font-bold"
+                              fill="#111827"
+                              className="canvas-timetable-text text-[11px] font-bold"
                             >
                               {headerText}
                             </text>
@@ -5524,11 +6548,8 @@ export const RouteNetworkEditor = ({
                                 index * 13
                               }
                               textAnchor={position.textAnchor}
-                              className={`text-[11px] ${
-                                time.includes("未入力")
-                                  ? "fill-amber-700"
-                                  : "fill-violet-700"
-                              }`}
+                              fill="#111827"
+                              className="canvas-timetable-text text-[11px]"
                             >
                               {time}
                             </text>
@@ -5685,7 +6706,7 @@ export const RouteNetworkEditor = ({
                 <label className="flex flex-col gap-1 text-xs text-gray-600">
                   経路セット
                   <select
-                    value={selectedRouteTemplateId}
+                    value={selectedRouteTemplate?.id ?? ""}
                     onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                       setSelectedRouteTemplateId(event.target.value)
                     }
@@ -5779,6 +6800,122 @@ export const RouteNetworkEditor = ({
 
           <section className="flex flex-col gap-2 border-t pt-4">
             <div className="flex items-center justify-between gap-2">
+              <h3 className="font-bold text-gray-700">車速区分</h3>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  <input
+                    type="checkbox"
+                    checked={state.routeTimeSpeedMultiplierEnabled}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                      const enabled = event.target.checked;
+                      if (
+                        enabled &&
+                        !window.confirm(
+                          "この変更を行うとダイヤグラムの正確性が著しく低下する恐れがあります．初期設定として全ての所要時間は現在の車速１の設定値を１倍として上書きされます．OKを押す前に必ず現在の進行状況を保存してください．"
+                        )
+                      ) {
+                        return;
+                      }
+                      dispatch({
+                        type: "setRouteTimeSpeedMultiplierEnabled",
+                        payload: { enabled },
+                      });
+                      if (enabled) setSelectedRouteTimeSpeedClassIndex(0);
+                    }}
+                  />
+                  倍率
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    dispatch({
+                      type: "addRouteTimeSpeedClass",
+                      payload: {
+                        copyFromIndex: selectedRouteTimeSpeedClassIndex,
+                      },
+                    });
+                    setSelectedRouteTimeSpeedClassIndex(
+                      routeTimeSpeedClassCount
+                    );
+                  }}
+                  className="rounded bg-blue-700 px-3 py-2 text-sm text-white"
+                >
+                  追加
+                </button>
+              </div>
+            </div>
+            <div className="flex max-h-40 flex-col gap-2 overflow-y-auto pr-1">
+              {routeTimeSpeedClasses.map((speedClass, index) => {
+                const isSelected = index === selectedRouteTimeSpeedClassIndex;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSelectedRouteTimeSpeedClassIndex(index)}
+                    className={`grid items-center gap-2 rounded border px-3 py-2 text-left text-sm ${
+                      state.routeTimeSpeedMultiplierEnabled
+                        ? "grid-cols-[minmax(0,1fr)_88px]"
+                        : "grid-cols-1"
+                    } ${
+                      isSelected
+                        ? "border-blue-700 bg-blue-50 text-blue-950 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-50"
+                        : "border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      車速{index + 1}
+                      {index === 0 ? "（基準）" : ""}
+                    </span>
+                    {state.routeTimeSpeedMultiplierEnabled ? (
+                      <input
+                        type="number"
+                        min="0.05"
+                        max="20"
+                        step="0.05"
+                        value={index === 0 ? 1 : speedClass.multiplier}
+                        disabled={index === 0}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          dispatch({
+                            type: "updateRouteTimeSpeedClass",
+                            payload: {
+                              index,
+                              multiplier: Number(event.target.value),
+                            },
+                          })
+                        }
+                        className="rounded border border-gray-300 bg-white px-2 py-1 text-right text-sm text-gray-900 disabled:bg-slate-100 disabled:text-slate-500"
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedRouteTimeSpeedClassIndex > 0 ? (
+              <button
+                type="button"
+                disabled={routeTimeSpeedClassCount <= 1}
+                onClick={() => {
+                  dispatch({
+                    type: "removeRouteTimeSpeedClass",
+                    payload: { index: selectedRouteTimeSpeedClassIndex },
+                  });
+                  setSelectedRouteTimeSpeedClassIndex((current) =>
+                    Math.max(
+                      0,
+                      Math.min(current - 1, routeTimeSpeedClassCount - 2)
+                    )
+                  );
+                }}
+                className="rounded bg-red-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              >
+                車速区分を削除
+              </button>
+            ) : null}
+          </section>
+
+          <section className="flex flex-col gap-2 border-t pt-4">
+            <div className="flex items-center justify-between gap-2">
               <h3 className="font-bold text-gray-700">所要時間</h3>
               <button
                 type="button"
@@ -5801,39 +6938,6 @@ export const RouteNetworkEditor = ({
                 {isRouteTimeMode ? "設定中" : "設定モード"}
               </button>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
-              <label className="flex flex-col gap-1 text-xs text-gray-600">
-                車速区分
-                <select
-                  value={selectedRouteTimeSpeedClassIndex}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                    setSelectedRouteTimeSpeedClassIndex(
-                      Math.max(0, Number(event.target.value))
-                    )
-                  }
-                  className="rounded border border-gray-300 bg-white p-2 text-sm text-gray-900"
-                >
-                  {Array.from({ length: routeTimeSpeedClassCount }, (_, index) => (
-                    <option key={index} value={index}>
-                      {index + 1}番設定
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  dispatch({
-                    type: "addRouteTimeSpeedClass",
-                    payload: { copyFromIndex: selectedRouteTimeSpeedClassIndex },
-                  });
-                  setSelectedRouteTimeSpeedClassIndex(routeTimeSpeedClassCount);
-                }}
-                className="rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700"
-              >
-                追加
-              </button>
-            </div>
             {isRouteTimeMode ? (
               <>
                 <p className="text-xs text-gray-500">
@@ -5845,17 +6949,22 @@ export const RouteNetworkEditor = ({
                     type="number"
                     min="0"
                     value={routeTimeMinutes}
+                    disabled={routeTimeManualInputDisabled}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       setRouteTimeMinutes(
                         Math.max(0, Number(event.target.value))
                       )
                     }
-                    className="rounded border border-gray-300 p-2 text-sm text-gray-900"
+                    className="rounded border border-gray-300 p-2 text-sm text-gray-900 disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </label>
                 <button
                   type="button"
-                  disabled={!routeTimeDraftComplete || routeTimeDraftDuplicate}
+                  disabled={
+                    !routeTimeDraftComplete ||
+                    routeTimeDraftDuplicate ||
+                    routeTimeManualInputDisabled
+                  }
                   onClick={saveRouteTimeDraft}
                   className="rounded bg-green-700 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
@@ -5906,10 +7015,14 @@ export const RouteNetworkEditor = ({
                     <button
                       key={section.id}
                       type="button"
-                      onClick={() => setSelectedRouteTimeSectionId(section.id)}
+                      onClick={() => {
+                        setSelectedRouteTimeSectionId(section.id);
+                        clearRangeSelections();
+                      }}
                       onContextMenu={(event: MouseEvent<HTMLButtonElement>) => {
                         event.preventDefault();
                         setSelectedRouteTimeSectionId(section.id);
+                        clearRangeSelections();
                         dispatch({
                           type: "updateRouteTimeSection",
                           payload: {
@@ -5930,7 +7043,8 @@ export const RouteNetworkEditor = ({
                       <span
                         className="mt-1 h-3 w-3 shrink-0 rounded-full"
                         style={{
-                          backgroundColor: getRouteTimeSectionColor(section),
+                          backgroundColor:
+                            getDisplayRouteTimeSectionColor(section),
                         }}
                       />
                       <span className="min-w-0 flex-1">
@@ -5977,7 +7091,7 @@ export const RouteNetworkEditor = ({
                   return (
                     <div className="flex flex-col gap-3 border-t pt-3">
                       <div className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
-                        <span>内部方向判定</span>
+                        <span>進行方向</span>
                         <button
                           type="button"
                           onClick={() =>
@@ -6009,6 +7123,7 @@ export const RouteNetworkEditor = ({
                           type="number"
                           min="0"
                           value={selectedRouteTimeSection.travelMinutes}
+                          disabled={routeTimeManualInputDisabled}
                           onChange={(event: ChangeEvent<HTMLInputElement>) =>
                             dispatch({
                               type: "updateRouteTimeSection",
@@ -6023,7 +7138,7 @@ export const RouteNetworkEditor = ({
                               },
                             })
                           }
-                          className="rounded border border-gray-300 p-2 text-sm text-gray-900"
+                          className="rounded border border-gray-300 p-2 text-sm text-gray-900 disabled:bg-slate-100 disabled:text-slate-500"
                         />
                       </label>
                       {hasSplitTiming ? (
@@ -6097,6 +7212,7 @@ export const RouteNetworkEditor = ({
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
+                              disabled={routeTimeManualInputDisabled}
                               onClick={() =>
                                 dispatch({
                                   type: "updateRouteTimeSection",
@@ -6108,7 +7224,7 @@ export const RouteNetworkEditor = ({
                                   },
                                 })
                               }
-                              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                             >
                               この区間の分岐配分を自動に戻す
                             </button>
@@ -6124,6 +7240,7 @@ export const RouteNetworkEditor = ({
                                 min="0"
                                 max={segmentDisplayTotal}
                                 value={breakpoint}
+                                disabled={routeTimeManualInputDisabled}
                                 onChange={(
                                   event: ChangeEvent<HTMLInputElement>
                                 ) =>
@@ -6133,7 +7250,7 @@ export const RouteNetworkEditor = ({
                                     Number(event.target.value)
                                   )
                                 }
-                                className="accent-green-700"
+                                className="accent-green-700 disabled:opacity-50"
                               />
                             </label>
                           ))}
@@ -6189,13 +7306,22 @@ export const RouteNetworkEditor = ({
                       ))}
                     </select>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => rotateRouteNodeClockwise(selectedNode)}
-                    className="rounded bg-slate-700 px-3 py-2 text-sm text-white"
-                  >
-                    時計回りに回転
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => rotateRouteNodeClockwise(selectedNode)}
+                      className="rounded bg-slate-700 px-3 py-2 text-sm text-white"
+                    >
+                      時計回り
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => flipRouteNode(selectedNode)}
+                      className="rounded bg-slate-700 px-3 py-2 text-sm text-white"
+                    >
+                      反転
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -6252,6 +7378,59 @@ export const RouteNetworkEditor = ({
                       </option>
                     ))}
                   </select>
+                  {selectedNode.type === "crossing" ? (
+                    <div className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-2 text-xs text-gray-700">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selectedNode.isHorizontalTerminal)}
+                          onChange={(event) =>
+                            dispatch({
+                              type: "updateRouteNode",
+                              payload: {
+                                id: selectedNode.id,
+                                isHorizontalTerminal: event.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        水平終端
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selectedNode.isVerticalTerminal)}
+                          onChange={(event) =>
+                            dispatch({
+                              type: "updateRouteNode",
+                              payload: {
+                                id: selectedNode.id,
+                                isVerticalTerminal: event.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        垂直終端
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 rounded border border-gray-200 p-2 text-xs text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selectedNode.isTerminal)}
+                        onChange={(event) =>
+                          dispatch({
+                            type: "updateRouteNode",
+                            payload: {
+                              id: selectedNode.id,
+                              isTerminal: event.target.checked,
+                            },
+                          })
+                        }
+                      />
+                      終端
+                    </label>
+                  )}
                   <label className="flex flex-col gap-1 text-xs text-gray-600">
                     {selectedNode.type === "crossing" ? "水平番線数" : "番線数"}
                     <input
@@ -6381,6 +7560,22 @@ export const RouteNetworkEditor = ({
                       </div>
                     </>
                   ) : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => rotateRouteNodeClockwise(selectedNode)}
+                      className="rounded bg-slate-700 px-3 py-2 text-sm text-white"
+                    >
+                      時計回り
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => flipRouteNode(selectedNode)}
+                      className="rounded bg-slate-700 px-3 py-2 text-sm text-white"
+                    >
+                      裏返し
+                    </button>
+                  </div>
                 </>
               )}
               <button
@@ -6401,7 +7596,7 @@ export const RouteNetworkEditor = ({
 
           <p className="border-t pt-4 text-sm text-gray-500">
             通常ドラッグでノード移動。Ctrl + ドラッグでノード同士を接続。
-            円形ボタンでノードを90°回転します。右上の読取方向はダイヤグラム縦軸順の判定に使います。
+            円形ボタンでノードを90°回転、裏返しできます。右上の読取方向はダイヤグラム縦軸順の判定に使います。
           </p>
         </aside>
       </div>

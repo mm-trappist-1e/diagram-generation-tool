@@ -2,7 +2,6 @@ import { RGBColor } from "react-color";
 
 export type RouteNodeType =
   | "station"
-  | "terminal"
   | "garage"
   | "yard"
   | "connection"
@@ -46,6 +45,10 @@ export type RouteNode = {
   x: number;
   y: number;
   rotation: number;
+  isFlipped: boolean;
+  isTerminal: boolean;
+  isHorizontalTerminal: boolean;
+  isVerticalTerminal: boolean;
   platformNumber: string;
   platformCount: number;
   platformLabels: string[];
@@ -84,6 +87,11 @@ export type RouteTimeSectionInternalDirection =
 export type RouteTimeSpeedProfile = {
   travelMinutes: number;
   segmentMinutes: number[];
+};
+
+export type RouteTimeSpeedClass = {
+  baseIndex: number;
+  multiplier: number;
 };
 
 export type RouteTimeSection = {
@@ -162,7 +170,6 @@ export type TrainRun = {
 
 export const routeNodeTypeLabels: Record<RouteNodeType, string> = {
   station: "駅",
-  terminal: "ターミナル駅",
   garage: "車庫",
   yard: "留置線",
   connection: "分岐",

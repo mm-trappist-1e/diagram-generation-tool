@@ -14,6 +14,7 @@ import {
   RouteTimeSection,
   RouteTimeSectionInternalDirection,
   RouteTimeSectionPort,
+  RouteTimeSpeedClass,
   RouteTimeSpeedProfile,
   Station,
   Stop,
@@ -45,6 +46,9 @@ const asStringArray = (value: unknown) =>
 
 const normalizeSpeedClassIndex = (value: unknown) =>
   Math.max(0, Math.floor(asNumber(value, 0)));
+
+const normalizeSpeedClassMultiplier = (value: unknown) =>
+  Math.max(0.05, Math.min(20, asNumber(value, 1)));
 
 const asRoutePortSide = (value: unknown, fallback: RoutePortSide) =>
   value === "top" || value === "right" || value === "bottom" || value === "left"
@@ -89,7 +93,6 @@ const asColor = (value: unknown, fallback: RGBColor): RGBColor => {
 
 const routeNodeTypes: RouteNodeType[] = [
   "station",
-  "terminal",
   "garage",
   "yard",
   "connection",
@@ -127,7 +130,9 @@ const connectionTypes: ConnectionType[] = [
 ];
 
 const asRouteNodeType = (value: unknown): RouteNodeType =>
-  routeNodeTypes.includes(value as RouteNodeType)
+  value === "terminal"
+    ? "station"
+    : routeNodeTypes.includes(value as RouteNodeType)
     ? (value as RouteNodeType)
     : "station";
 
@@ -189,6 +194,10 @@ const normalizeRouteNode = (
       x: 120 + index * 120,
       y: 120,
       rotation: 0,
+      isFlipped: false,
+      isTerminal: false,
+      isHorizontalTerminal: false,
+      isVerticalTerminal: false,
       platformNumber: "",
       platformCount: 1,
       platformLabels: ["1"],
@@ -199,6 +208,7 @@ const normalizeRouteNode = (
     };
   }
   const type = asRouteNodeType(value.type);
+  const isLegacyTerminal = value.type === "terminal";
   const connectionType = asConnectionType(value.connectionType);
   const platformCount = Math.max(
     1,
@@ -224,6 +234,13 @@ const normalizeRouteNode = (
       value.rotation,
       allowsFourDirectionNode(type, connectionType)
     ),
+    isFlipped: asBoolean(value.isFlipped, false),
+    isTerminal: asBoolean(
+      value.isTerminal,
+      isLegacyTerminal || value.type === "turnback"
+    ),
+    isHorizontalTerminal: asBoolean(value.isHorizontalTerminal, false),
+    isVerticalTerminal: asBoolean(value.isVerticalTerminal, false),
     platformNumber: asString(value.platformNumber),
     platformCount,
     platformLabels: Array.from({ length: platformCount }).map(
@@ -452,6 +469,18 @@ const expandRouteTimeSectionSpeedProfiles = (
     segmentMinutes: firstProfile.segmentMinutes,
     speedProfiles,
   };
+};
+
+const normalizeRouteTimeSpeedClasses = (
+  value: unknown,
+  count: number
+): RouteTimeSpeedClass[] => {
+  const source = Array.isArray(value) ? value.filter(isObject) : [];
+  const normalizedCount = Math.max(1, Math.floor(count));
+  return Array.from({ length: normalizedCount }, (_, index) => ({
+    baseIndex: 0,
+    multiplier: normalizeSpeedClassMultiplier(source[index]?.multiplier),
+  }));
 };
 
 const normalizeStop = (
@@ -692,6 +721,21 @@ const diagramPointsToRouteNodes = (
             allowsFourDirectionNode(normalized.type, connectionType)
           )
         : 0,
+      isFlipped: isObject(diagramPoint)
+        ? asBoolean(diagramPoint.isFlipped, false)
+        : false,
+      isTerminal: isObject(diagramPoint)
+        ? asBoolean(
+            diagramPoint.isTerminal,
+            diagramPoint.type === "terminal" || diagramPoint.type === "turnback"
+          )
+        : false,
+      isHorizontalTerminal: isObject(diagramPoint)
+        ? asBoolean(diagramPoint.isHorizontalTerminal, false)
+        : false,
+      isVerticalTerminal: isObject(diagramPoint)
+        ? asBoolean(diagramPoint.isVerticalTerminal, false)
+        : false,
       platformNumber: isObject(diagramPoint)
         ? asString(diagramPoint.platformNumber)
         : "",
@@ -755,9 +799,16 @@ export const normalizeState = (value: unknown): State | null => {
   const routeTimeSpeedClassCount = Math.max(
     1,
     Math.floor(asNumber(value.routeTimeSpeedClassCount, 1)),
+    Array.isArray(value.routeTimeSpeedClasses)
+      ? value.routeTimeSpeedClasses.length
+      : 0,
     ...normalizedRouteTimeSections.map(
       (section) => section.speedProfiles.length
     )
+  );
+  const routeTimeSpeedClasses = normalizeRouteTimeSpeedClasses(
+    value.routeTimeSpeedClasses,
+    routeTimeSpeedClassCount
   );
   const routeTimeSections = normalizedRouteTimeSections.map((section) =>
     expandRouteTimeSectionSpeedProfiles(section, routeTimeSpeedClassCount)
@@ -792,6 +843,11 @@ export const normalizeState = (value: unknown): State | null => {
     routeEdges,
     routeTimeSections,
     routeTimeSpeedClassCount,
+    routeTimeSpeedClasses,
+    routeTimeSpeedMultiplierEnabled: asBoolean(
+      value.routeTimeSpeedMultiplierEnabled,
+      false
+    ),
     routeTemplates,
     trainRuns,
     routeReadDirection: asRouteReadDirection(
@@ -819,6 +875,10 @@ const migrateLegacyState = (value: JSONObject): State | null => {
     x: 120 + index * 120,
     y: 160,
     rotation: 0,
+    isFlipped: false,
+    isTerminal: false,
+    isHorizontalTerminal: false,
+    isVerticalTerminal: false,
     platformNumber: "",
     platformCount: 1,
     platformLabels: ["1"],
@@ -892,6 +952,8 @@ const migrateLegacyState = (value: JSONObject): State | null => {
     routeEdges: [],
     routeTimeSections: [],
     routeTimeSpeedClassCount: 1,
+    routeTimeSpeedClasses: [{ baseIndex: 0, multiplier: 1 }],
+    routeTimeSpeedMultiplierEnabled: false,
     routeTemplates: [],
     trainRuns,
     routeReadDirection: "topToBottom",

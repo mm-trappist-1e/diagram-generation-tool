@@ -1137,11 +1137,17 @@
         }
       ],
       "travelMinutes": 26,
-      "segmentMinutes": [],
+      "segmentMinutes": [
+        7,
+        19
+      ],
       "speedProfiles": [
         {
           "travelMinutes": 26,
-          "segmentMinutes": []
+          "segmentMinutes": [
+            7,
+            19
+          ]
         }
       ],
       "internalDirection": "reverse"

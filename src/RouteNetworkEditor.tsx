@@ -3171,6 +3171,13 @@ export const RouteNetworkEditor = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const routeMapPanelRef = useRef<HTMLElement>(null);
+  const canvasZoomRef = useRef(getInitialCanvasZoom());
+  const canvasPinchStateRef = useRef<{
+    startDistance: number;
+    startZoom: number;
+    contentX: number;
+    contentY: number;
+  } | null>(null);
   const movedRef = useRef(false);
   const routeMapClipboardRef = useRef<RouteMapClipboard | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -3231,6 +3238,10 @@ export const RouteNetworkEditor = ({
   const [newNodePlatformCount, setNewNodePlatformCount] = useState(1);
   const [newNodeVerticalPlatformCount, setNewNodeVerticalPlatformCount] =
     useState(1);
+
+  useEffect(() => {
+    canvasZoomRef.current = canvasZoom;
+  }, [canvasZoom]);
 
   const selectedTrainRun = state.trainRuns.find(
     (trainRun) => trainRun.id === selectedTrainRunId
@@ -4939,6 +4950,98 @@ export const RouteNetworkEditor = ({
     viewport.addEventListener("wheel", handleWheel, { passive: false });
     return () => {
       viewport.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = canvasViewportRef.current;
+    if (!viewport) return;
+
+    const getTouchMetrics = (touches: TouchList) => {
+      const first = touches[0];
+      const second = touches[1];
+      return {
+        midpointX: (first.clientX + second.clientX) / 2,
+        midpointY: (first.clientY + second.clientY) / 2,
+        distance: Math.hypot(
+          first.clientX - second.clientX,
+          first.clientY - second.clientY
+        ),
+      };
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 2) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const { midpointX, midpointY, distance } = getTouchMetrics(event.touches);
+      if (distance <= 0) return;
+      const rect = viewport.getBoundingClientRect();
+      const viewportX = midpointX - rect.left;
+      const viewportY = midpointY - rect.top;
+      canvasPinchStateRef.current = {
+        startDistance: distance,
+        startZoom: canvasZoomRef.current,
+        contentX: viewport.scrollLeft + viewportX,
+        contentY: viewport.scrollTop + viewportY,
+      };
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const pinchState = canvasPinchStateRef.current;
+      if (!pinchState || event.touches.length !== 2) return;
+      const { midpointX, midpointY, distance } = getTouchMetrics(event.touches);
+      if (distance <= 0 || pinchState.startDistance <= 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = viewport.getBoundingClientRect();
+      const viewportX = midpointX - rect.left;
+      const viewportY = midpointY - rect.top;
+      const nextZoom = Math.max(
+        minCanvasZoom,
+        Math.min(
+          maxCanvasZoom,
+          pinchState.startZoom * (distance / pinchState.startDistance)
+        )
+      );
+      const scale = nextZoom / pinchState.startZoom;
+      requestAnimationFrame(() => {
+        const nextViewport = canvasViewportRef.current;
+        if (!nextViewport) return;
+        nextViewport.scrollLeft = Math.max(
+          0,
+          pinchState.contentX * scale - viewportX
+        );
+        nextViewport.scrollTop = Math.max(
+          0,
+          pinchState.contentY * scale - viewportY
+        );
+      });
+      setCanvasZoom(nextZoom);
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (event.touches.length >= 2) return;
+      canvasPinchStateRef.current = null;
+    };
+
+    viewport.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    viewport.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    viewport.addEventListener("touchend", handleTouchEnd, {
+      passive: false,
+    });
+    viewport.addEventListener("touchcancel", handleTouchEnd, {
+      passive: false,
+    });
+    return () => {
+      viewport.removeEventListener("touchstart", handleTouchStart);
+      viewport.removeEventListener("touchmove", handleTouchMove);
+      viewport.removeEventListener("touchend", handleTouchEnd);
+      viewport.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, []);
 
@@ -6950,35 +7053,6 @@ export const RouteNetworkEditor = ({
                 )
               )}
             </select>
-          </div>
-          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1 rounded border border-slate-300 bg-white/95 px-2 py-2 text-sm shadow dark:border-slate-600 dark:bg-slate-800/95">
-            <button
-              type="button"
-              onClick={() =>
-                setCanvasZoom((currentZoom) =>
-                  Math.max(minCanvasZoom, currentZoom / 1.15)
-                )
-              }
-              className="h-9 w-9 rounded bg-slate-700 text-lg font-bold leading-none text-white"
-              aria-label="縮小"
-            >
-              -
-            </button>
-            <span className="w-14 text-center text-xs font-medium text-slate-700 dark:text-slate-100">
-              {Math.round(canvasZoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() =>
-                setCanvasZoom((currentZoom) =>
-                  Math.min(maxCanvasZoom, currentZoom * 1.15)
-                )
-              }
-              className="h-9 w-9 rounded bg-slate-700 text-lg font-bold leading-none text-white"
-              aria-label="拡大"
-            >
-              +
-            </button>
           </div>
         </div>
 

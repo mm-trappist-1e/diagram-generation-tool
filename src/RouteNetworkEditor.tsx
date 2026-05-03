@@ -162,7 +162,10 @@ const connectionBranchGap = layoutGridSize * 2;
 const portGap = layoutGridSize * 2;
 const portRadius = 7;
 const routeStubLength = layoutGridSize * 2;
+const routeNodeExitStubLength = layoutGridSize * 5;
 const routeClearance = layoutGridSize * 2;
+const routeLaneStep = portGap;
+const routeTrackOverlapPenalty = 120;
 const routeTimeFlowDasharray = "10 26";
 const routeTimeFlowDashoffsetValues = "36;0";
 const rotateButtonRadius = 12;
@@ -172,6 +175,15 @@ const canvasWidth = baseCanvasSide * canvasSizeMultiplier;
 const canvasHeight = canvasWidth;
 const minCanvasZoom = 0.4;
 const maxCanvasZoom = 2.4;
+const desktopCanvasPanelMediaQuery = "(min-width: 1536px)";
+
+const getInitialCanvasZoom = () =>
+  typeof window !== "undefined" && window.innerWidth < 640 ? 0.7 : 1;
+
+const getCompactCanvasViewportHeight = () => {
+  if (typeof window === "undefined") return 700;
+  return Math.max(420, Math.min(620, Math.round(window.innerHeight * 0.62)));
+};
 
 const nodeColors: Record<RouteNodeType, string> = {
   station: "#ffffff",
@@ -738,6 +750,45 @@ const getRouteEdgeToPortRef = (routeEdge: State["routeEdges"][number]) => ({
   side: routeEdge.toPortSide,
   index: routeEdge.toPortIndex,
 });
+
+const getRouteEdgeBundleEndpointKey = (
+  nodeId: string,
+  side: RoutePortSide
+) => `${nodeId}:${side}`;
+
+const getRouteEdgeBundleKey = (routeEdge: State["routeEdges"][number]) => {
+  const fromKey = getRouteEdgeBundleEndpointKey(
+    routeEdge.fromNodeId,
+    routeEdge.fromPortSide
+  );
+  const toKey = getRouteEdgeBundleEndpointKey(
+    routeEdge.toNodeId,
+    routeEdge.toPortSide
+  );
+  return fromKey < toKey ? `${fromKey}|${toKey}` : `${toKey}|${fromKey}`;
+};
+
+const getRouteEdgeEndpointSideKeys = (
+  routeEdge: State["routeEdges"][number]
+) => [
+  getRouteEdgeBundleEndpointKey(routeEdge.fromNodeId, routeEdge.fromPortSide),
+  getRouteEdgeBundleEndpointKey(routeEdge.toNodeId, routeEdge.toPortSide),
+];
+
+const routeEdgesShareTrackBundle = (
+  routeEdge: State["routeEdges"][number],
+  otherRouteEdge: State["routeEdges"][number]
+) => {
+  if (
+    getRouteEdgeBundleKey(routeEdge) === getRouteEdgeBundleKey(otherRouteEdge)
+  ) {
+    return true;
+  }
+  const endpointSideKeys = new Set(getRouteEdgeEndpointSideKeys(routeEdge));
+  return getRouteEdgeEndpointSideKeys(otherRouteEdge).some((key) =>
+    endpointSideKeys.has(key)
+  );
+};
 
 const findRouteTimePath = (
   start: PortRef,
@@ -1495,7 +1546,7 @@ const moveFromSide = (point: Point, side: RoutePortSide, distance: number) => {
 };
 
 const getRouteStubLength = (routeNode: RouteNode) =>
-  routeNode.type === "connection" ? 0 : routeStubLength;
+  routeNode.type === "connection" ? 0 : routeNodeExitStubLength;
 
 const pointsEqual = (a: Point, b: Point) => a.x === b.x && a.y === b.y;
 
@@ -1518,6 +1569,78 @@ const compactPoints = (points: Point[]) =>
     }
     return [...result, point];
   }, []);
+
+const segmentExtendsFromSide = (
+  anchor: Point,
+  next: Point,
+  side: RoutePortSide
+) => {
+  const dx = next.x - anchor.x;
+  const dy = next.y - anchor.y;
+  if (dx === 0 && dy === 0) return false;
+  const vector = getSideVector(side);
+  return (
+    dx * vector.x + dy * vector.y > 0 &&
+    dx * Math.abs(vector.y) === 0 &&
+    dy * Math.abs(vector.x) === 0
+  );
+};
+
+const segmentDoesNotReverseFromSide = (
+  anchor: Point,
+  next: Point,
+  side: RoutePortSide
+) => {
+  const dx = next.x - anchor.x;
+  const dy = next.y - anchor.y;
+  if (dx === 0 && dy === 0) return false;
+  const vector = getSideVector(side);
+  return dx * vector.x + dy * vector.y >= 0;
+};
+
+type EndpointDirectionRule = "none" | "straight" | "nonReverse";
+
+const segmentMatchesEndpointDirectionRule = (
+  anchor: Point,
+  next: Point,
+  side: RoutePortSide,
+  rule: EndpointDirectionRule
+) => {
+  if (rule === "none") return true;
+  if (rule === "nonReverse") {
+    return segmentDoesNotReverseFromSide(anchor, next, side);
+  }
+  return segmentExtendsFromSide(anchor, next, side);
+};
+
+const routeRespectsEndpointDirections = (
+  points: Point[],
+  from: Point,
+  fromSide: RoutePortSide,
+  to: Point,
+  toSide: RoutePortSide,
+  fromRule: EndpointDirectionRule,
+  toRule: EndpointDirectionRule
+) => {
+  const compacted = compactPoints(points);
+  if (fromRule !== "none") {
+    const first = compacted[0];
+    const next = compacted[1];
+    if (!first || !next || !pointsEqual(first, from)) return false;
+    if (!segmentMatchesEndpointDirectionRule(from, next, fromSide, fromRule)) {
+      return false;
+    }
+  }
+  if (toRule !== "none") {
+    const previous = compacted[compacted.length - 2];
+    const last = compacted[compacted.length - 1];
+    if (!previous || !last || !pointsEqual(last, to)) return false;
+    if (!segmentMatchesEndpointDirectionRule(to, previous, toSide, toRule)) {
+      return false;
+    }
+  }
+  return true;
+};
 
 const pointsToPath = (points: Point[]) => {
   const compacted = compactPoints(points);
@@ -1635,31 +1758,28 @@ const getSideLane = (
   return rect.y + rect.height + offset;
 };
 
+const getStablePortLaneRank = (
+  routeNode: RouteNode,
+  side: RoutePortSide,
+  index: number
+) => {
+  const count = getPortCountForSide(routeNode, side);
+  if (count <= 1) return 0;
+  return getVisualPortIndex(routeNode, side, index);
+};
+
 const getIndexedSideLane = (
   routeNode: RouteNode,
   side: RoutePortSide,
   index: number,
-  towardPoint: Point,
   offset = routeClearance + routeStubLength
 ) => {
   const rect = getNodeRect(routeNode);
-  const count = getPortCountForSide(routeNode, side);
-  const port = getPortPosition(routeNode, side, index);
-  const laneStep = layoutGridSize;
   const baseLane = getSideLane(rect, side, offset);
   const direction = side === "left" || side === "top" ? -1 : 1;
-  const visualIndex = getVisualPortIndex(routeNode, side, index);
-  let rank = 0;
+  const rank = getStablePortLaneRank(routeNode, side, index);
 
-  if (count > 1) {
-    if (side === "left" || side === "right") {
-      rank = towardPoint.y >= port.y ? count - 1 - visualIndex : visualIndex;
-    } else {
-      rank = towardPoint.x >= port.x ? count - 1 - visualIndex : visualIndex;
-    }
-  }
-
-  return baseLane + direction * rank * laneStep;
+  return baseLane + direction * rank * routeLaneStep;
 };
 
 const getSharedSameSideLane = (
@@ -1668,12 +1788,11 @@ const getSharedSameSideLane = (
   side: RoutePortSide,
   fromPortIndex: number,
   toPortIndex: number,
+  laneRankOverride?: number,
   offset = routeClearance + routeStubLength
 ) => {
   const fromRect = getNodeRect(fromNode);
   const toRect = getNodeRect(toNode);
-  const fromPort = getPortPosition(fromNode, side, fromPortIndex);
-  const toPort = getPortPosition(toNode, side, toPortIndex);
   const direction = side === "left" || side === "top" ? -1 : 1;
   const fromBaseLane = getSideLane(fromRect, side, offset);
   const toBaseLane = getSideLane(toRect, side, offset);
@@ -1681,20 +1800,58 @@ const getSharedSameSideLane = (
     direction > 0
       ? Math.max(fromBaseLane, toBaseLane)
       : Math.min(fromBaseLane, toBaseLane);
-  const anchorVisualIndex =
-    side === "left" || side === "right"
-      ? fromPort.y <= toPort.y
-        ? getVisualPortIndex(fromNode, side, fromPortIndex)
-        : getVisualPortIndex(toNode, side, toPortIndex)
-      : fromPort.x <= toPort.x
-      ? getVisualPortIndex(fromNode, side, fromPortIndex)
-      : getVisualPortIndex(toNode, side, toPortIndex);
-  const count = Math.max(
-    getPortCountForSide(fromNode, side),
-    getPortCountForSide(toNode, side)
+  const rank =
+    laneRankOverride ??
+    Math.max(
+      getStablePortLaneRank(fromNode, side, fromPortIndex),
+      getStablePortLaneRank(toNode, side, toPortIndex)
   );
-  const rank = Math.max(0, Math.min(count - 1, count - 1 - anchorVisualIndex));
-  return baseLane + direction * rank * layoutGridSize;
+  return baseLane + direction * rank * routeLaneStep;
+};
+
+const getRouteEdgeSameSideLaneGroupKey = (
+  routeEdge: State["routeEdges"][number]
+) =>
+  routeEdge.fromPortSide === routeEdge.toPortSide
+    ? getRouteEdgeBundleKey(routeEdge)
+    : null;
+
+const getRouteEdgeSameSideLaneSortKey = (
+  routeEdge: State["routeEdges"][number],
+  routeNodeById: Map<string, RouteNode>
+) => {
+  const fromNode = routeNodeById.get(routeEdge.fromNodeId);
+  const toNode = routeNodeById.get(routeEdge.toNodeId);
+  const endpoints = [
+    {
+      key: getRouteEdgeBundleEndpointKey(
+        routeEdge.fromNodeId,
+        routeEdge.fromPortSide
+      ),
+      rank: fromNode
+        ? getStablePortLaneRank(
+            fromNode,
+            routeEdge.fromPortSide,
+            routeEdge.fromPortIndex
+          )
+        : routeEdge.fromPortIndex,
+    },
+    {
+      key: getRouteEdgeBundleEndpointKey(
+        routeEdge.toNodeId,
+        routeEdge.toPortSide
+      ),
+      rank: toNode
+        ? getStablePortLaneRank(
+            toNode,
+            routeEdge.toPortSide,
+            routeEdge.toPortIndex
+          )
+        : routeEdge.toPortIndex,
+    },
+  ].sort((a, b) => a.key.localeCompare(b.key));
+
+  return `${endpoints[0].key}:${endpoints[0].rank}|${endpoints[1].key}:${endpoints[1].rank}|${routeEdge.id}`;
 };
 
 const getLanePoint = (point: Point, side: RoutePortSide, lane: number): Point =>
@@ -2042,6 +2199,39 @@ const countCollisions = (
     });
   }
   return collisions;
+};
+
+const getRouteSegmentsFromPoints = (points: Point[]): RoutePathSegment[] => {
+  const compacted = compactPoints(points);
+  return compacted.flatMap((from, index) => {
+    const to = compacted[index + 1];
+    if (!to) return [];
+    const length = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+    return length > 0 ? [{ from, to, length }] : [];
+  });
+};
+
+const getRouteSoftObstacleScore = (
+  points: Point[],
+  softObstacles: ObstacleRect[]
+) => {
+  if (softObstacles.length === 0) return 0;
+  return getRouteSegmentsFromPoints(points).reduce(
+    (score, segment) =>
+      score +
+      softObstacles.reduce(
+        (segmentScore, obstacle) =>
+          segmentScore +
+          (segmentIntersectsRect(segment.from, segment.to, obstacle)
+            ? Math.max(
+                1,
+                Math.min(segment.length, obstacle.width + obstacle.height)
+              )
+            : 0),
+        0
+      ),
+    0
+  );
 };
 
 const getRouteLength = (points: Point[]) =>
@@ -2513,11 +2703,24 @@ const scoreRouteCandidate = (
   points: Point[],
   obstacles: ObstacleRect[],
   fromNodeId: string,
-  toNodeId: string
+  toNodeId: string,
+  softObstacles: ObstacleRect[] = [],
+  trackOverlapObstacles: ObstacleRect[] = []
 ) =>
   countCollisions(points, obstacles, fromNodeId, toNodeId) * 1_000_000 +
+  getRouteSoftObstacleScore(points, softObstacles) * 40_000 +
+  getRouteSoftObstacleScore(points, trackOverlapObstacles) *
+    routeTrackOverlapPenalty +
   getBendCount(points) * 500 +
   getRouteLength(points);
+
+const hasRouteConflict = (
+  points: Point[],
+  softObstacles: ObstacleRect[],
+  trackOverlapObstacles: ObstacleRect[]
+) =>
+  getRouteSoftObstacleScore(points, softObstacles) > 0 ||
+  getRouteSoftObstacleScore(points, trackOverlapObstacles) > 0;
 
 const getSimpleClearRoute = (
   from: Point,
@@ -2526,7 +2729,9 @@ const getSimpleClearRoute = (
   to: Point,
   obstacles: ObstacleRect[],
   fromNodeId: string,
-  toNodeId: string
+  toNodeId: string,
+  softObstacles: ObstacleRect[] = [],
+  trackOverlapObstacles: ObstacleRect[] = []
 ) => {
   const candidates: Point[][] = [
     ...(start.x === end.x || start.y === end.y ? [[from, start, end, to]] : []),
@@ -2543,8 +2748,22 @@ const getSimpleClearRoute = (
   if (clearCandidates.length === 0) return null;
 
   return clearCandidates.reduce((best, candidate) =>
-    scoreRouteCandidate(candidate, obstacles, fromNodeId, toNodeId) <
-    scoreRouteCandidate(best, obstacles, fromNodeId, toNodeId)
+    scoreRouteCandidate(
+      candidate,
+      obstacles,
+      fromNodeId,
+      toNodeId,
+      softObstacles,
+      trackOverlapObstacles
+    ) <
+    scoreRouteCandidate(
+      best,
+      obstacles,
+      fromNodeId,
+      toNodeId,
+      softObstacles,
+      trackOverlapObstacles
+    )
       ? candidate
       : best
   );
@@ -2557,51 +2776,80 @@ const buildAutoRoutePoints = (
   toSide: RoutePortSide,
   fromPortIndex: number,
   toPortIndex: number,
-  routeNodes: RouteNode[]
+  routeNodes: RouteNode[],
+  softRouteObstacles: ObstacleRect[] = [],
+  trackOverlapObstacles: ObstacleRect[] = [],
+  sameSideLaneRank?: number
 ) => {
   const from = getPortPosition(fromNode, fromSide, fromPortIndex);
   const to = getPortPosition(toNode, toSide, toPortIndex);
   const start = moveFromSide(from, fromSide, getRouteStubLength(fromNode));
   const end = moveFromSide(to, toSide, getRouteStubLength(toNode));
+  const fromCenter = getNodeCenter(fromNode);
+  const toCenter = getNodeCenter(toNode);
+  const fromFacing = isSideFacingPoint(fromSide, fromCenter, toCenter);
+  const toFacing = isSideFacingPoint(toSide, toCenter, fromCenter);
   const nodeObstacles = routeNodes.flatMap(getNodeObstacleRects);
-  const requiresIndexedLanes =
-    fromSide === toSide &&
-    (getPortCountForSide(fromNode, fromSide) > 1 ||
-      getPortCountForSide(toNode, toSide) > 1);
+  const obstacles = [
+    ...nodeObstacles.map((rect) => ({
+      ...rect,
+      x: rect.x - 4,
+      y: rect.y - 4,
+      width: rect.width + 8,
+      height: rect.height + 8,
+    })),
+    ...getNodePortGateKeepoutRects(fromNode, fromSide, fromPortIndex),
+    ...getNodePortGateKeepoutRects(toNode, toSide, toPortIndex),
+  ];
+  const routingObstacles = [...obstacles, ...trackOverlapObstacles];
+  const requiresSharedSameSideLane = fromSide === toSide;
+  const requiresLaneRoute =
+    requiresSharedSameSideLane || !fromFacing || !toFacing;
+  const respectsEndpointDirections = (candidate: Point[]) =>
+    routeRespectsEndpointDirections(
+      candidate,
+      from,
+      fromSide,
+      to,
+      toSide,
+      fromNode.type === "connection" ? "nonReverse" : "straight",
+      toNode.type === "connection" ? "nonReverse" : "straight"
+    );
   const simpleClearRoute = getSimpleClearRoute(
     from,
     start,
     end,
     to,
-    nodeObstacles,
+    routingObstacles,
     fromNode.id,
-    toNode.id
+    toNode.id,
+    softRouteObstacles,
+    trackOverlapObstacles
   );
 
-  if (simpleClearRoute && !requiresIndexedLanes) return simpleClearRoute;
+  if (simpleClearRoute && !requiresLaneRoute) return simpleClearRoute;
 
   const sharedSameSideLane =
-    requiresIndexedLanes && fromSide === toSide
+    requiresSharedSameSideLane
       ? getSharedSameSideLane(
           fromNode,
           toNode,
           fromSide,
           fromPortIndex,
-          toPortIndex
+          toPortIndex,
+          sameSideLaneRank
         )
       : null;
   const fromLane =
     sharedSameSideLane ??
-    getIndexedSideLane(fromNode, fromSide, fromPortIndex, to);
+    getIndexedSideLane(fromNode, fromSide, fromPortIndex);
   const toLane =
-    sharedSameSideLane ?? getIndexedSideLane(toNode, toSide, toPortIndex, from);
+    sharedSameSideLane ?? getIndexedSideLane(toNode, toSide, toPortIndex);
   const laneStart = getLanePoint(start, fromSide, fromLane);
   const laneEnd = getLanePoint(end, toSide, toLane);
   const fromRect = getNodeRect(fromNode);
   const toRect = getNodeRect(toNode);
 
-  const fromCenter = getNodeCenter(fromNode);
-  const toCenter = getNodeCenter(toNode);
   const minX = Math.min(fromRect.x, toRect.x) - routeClearance;
   const maxX =
     Math.max(fromRect.x + fromRect.width, toRect.x + toRect.width) +
@@ -2612,8 +2860,6 @@ const buildAutoRoutePoints = (
     routeClearance;
   const midX = (start.x + end.x) / 2;
   const midY = (start.y + end.y) / 2;
-  const fromFacing = isSideFacingPoint(fromSide, fromCenter, toCenter);
-  const toFacing = isSideFacingPoint(toSide, toCenter, fromCenter);
   const directCandidates: Point[][] = [
     [
       from,
@@ -2778,29 +3024,16 @@ const buildAutoRoutePoints = (
     ...sideAwareCandidates,
     ...outerCandidates,
   ];
-  const obstacles = [
-    ...routeNodes.flatMap((routeNode) =>
-      getNodeObstacleRects(routeNode).map((rect) => ({
-        ...rect,
-        x: rect.x - 4,
-        y: rect.y - 4,
-        width: rect.width + 8,
-        height: rect.height + 8,
-      }))
-    ),
-    ...getNodePortGateKeepoutRects(fromNode, fromSide, fromPortIndex),
-    ...getNodePortGateKeepoutRects(toNode, toSide, toPortIndex),
-  ];
   const searchBounds = {
     minX: Math.min(
       minX,
-      ...obstacles.map((obstacle) => obstacle.x),
+      ...routingObstacles.map((obstacle) => obstacle.x),
       start.x,
       end.x
     ),
     maxX: Math.max(
       maxX,
-      ...obstacles.map((obstacle) => obstacle.x + obstacle.width),
+      ...routingObstacles.map((obstacle) => obstacle.x + obstacle.width),
       laneStart.x,
       laneEnd.x,
       start.x,
@@ -2808,30 +3041,36 @@ const buildAutoRoutePoints = (
     ),
     minY: Math.min(
       minY,
-      ...obstacles.map((obstacle) => obstacle.y),
+      ...routingObstacles.map((obstacle) => obstacle.y),
       start.y,
       end.y
     ),
     maxY: Math.max(
       maxY,
-      ...obstacles.map((obstacle) => obstacle.y + obstacle.height),
+      ...routingObstacles.map((obstacle) => obstacle.y + obstacle.height),
       laneStart.y,
       laneEnd.y,
       start.y,
       end.y
     ),
   };
-  if (canUseOrthogonalSegment(laneStart, laneEnd, obstacles)) {
-    return compactPoints([from, start, laneStart, laneEnd, end, to]);
+  if (canUseOrthogonalSegment(laneStart, laneEnd, routingObstacles)) {
+    const candidate = compactPoints([from, start, laneStart, laneEnd, end, to]);
+    if (
+      respectsEndpointDirections(candidate) &&
+      !hasRouteConflict(candidate, softRouteObstacles, trackOverlapObstacles)
+    ) {
+      return candidate;
+    }
   }
 
   const singleBendBetweenLanes = findSingleBendRoute(
     laneStart,
     laneEnd,
-    obstacles
+    routingObstacles
   );
   if (singleBendBetweenLanes) {
-    return compactPoints([
+    const candidate = compactPoints([
       from,
       start,
       laneStart,
@@ -2840,35 +3079,83 @@ const buildAutoRoutePoints = (
       end,
       to,
     ]);
+    if (
+      respectsEndpointDirections(candidate) &&
+      !hasRouteConflict(candidate, softRouteObstacles, trackOverlapObstacles)
+    ) {
+      return candidate;
+    }
   }
 
   const searchedRoute = findOrthogonalRoutePoints(
     laneStart,
     laneEnd,
-    obstacles,
+    routingObstacles,
     searchBounds
   );
 
-  if (searchedRoute) {
-    return compactPoints([
-      from,
-      start,
-      ...simplifyOrthogonalRoute(searchedRoute, obstacles),
-      end,
-      to,
-    ]);
+  const searchedCandidate = searchedRoute
+    ? compactPoints([
+        from,
+        start,
+        ...simplifyOrthogonalRoute(searchedRoute, routingObstacles),
+        end,
+        to,
+      ])
+    : null;
+
+  if (
+    searchedCandidate &&
+    respectsEndpointDirections(searchedCandidate) &&
+    !hasRouteConflict(
+      searchedCandidate,
+      softRouteObstacles,
+      trackOverlapObstacles
+    )
+  ) {
+    return searchedCandidate;
   }
 
-  return compactPoints(
-    simplifyOrthogonalRoute(
-      candidates.reduce((best, candidate) =>
-        scoreRouteCandidate(candidate, obstacles, fromNode.id, toNode.id) <
-        scoreRouteCandidate(best, obstacles, fromNode.id, toNode.id)
+  const fallbackCandidates = searchedCandidate
+    ? [...candidates, searchedCandidate]
+    : candidates;
+  const endpointSafeFallbackCandidates = fallbackCandidates.filter(
+    respectsEndpointDirections
+  );
+  const scoredFallbackCandidates =
+    endpointSafeFallbackCandidates.length > 0
+      ? endpointSafeFallbackCandidates
+      : fallbackCandidates;
+
+  const selectedCandidate = scoredFallbackCandidates.reduce((best, candidate) =>
+        scoreRouteCandidate(
+          candidate,
+          obstacles,
+          fromNode.id,
+          toNode.id,
+          softRouteObstacles,
+          trackOverlapObstacles
+        ) <
+        scoreRouteCandidate(
+          best,
+          obstacles,
+          fromNode.id,
+          toNode.id,
+          softRouteObstacles,
+          trackOverlapObstacles
+        )
           ? candidate
           : best
-      ),
-      obstacles
-    )
+  );
+  const simplifiedCandidate = simplifyOrthogonalRoute(
+    selectedCandidate,
+    routingObstacles
+  );
+
+  return compactPoints(
+    respectsEndpointDirections(simplifiedCandidate)
+      ? simplifiedCandidate
+      : selectedCandidate
   );
 };
 
@@ -2933,8 +3220,10 @@ export const RouteNetworkEditor = ({
   const [routeTemplateMessage, setRouteTemplateMessage] = useState("");
   const [hoveredRouteTemplatePlatform, setHoveredRouteTemplatePlatform] =
     useState<RoutePlatformRef | null>(null);
-  const [canvasViewportHeight, setCanvasViewportHeight] = useState(700);
-  const [canvasZoom, setCanvasZoom] = useState(1);
+  const [canvasViewportHeight, setCanvasViewportHeight] = useState(
+    getCompactCanvasViewportHeight
+  );
+  const [canvasZoom, setCanvasZoom] = useState(getInitialCanvasZoom);
   const [newNodeStationId, setNewNodeStationId] = useState("");
   const [newNodeLabel, setNewNodeLabel] = useState("");
   const [newNodeType, setNewNodeType] = useState<RouteNodeType>("station");
@@ -3088,11 +3377,56 @@ export const RouteNetworkEditor = ({
     [state.routeEdges]
   );
   const routeEdgeGeometry = useMemo<RouteEdgeGeometry[]>(
-    () =>
-      state.routeEdges.flatMap((routeEdge) => {
+    () => {
+      const geometries: RouteEdgeGeometry[] = [];
+      const sameSideLaneRankByRouteEdgeId = new Map<string, number>();
+      const sameSideLaneGroups = new Map<string, RouteEdge[]>();
+      state.routeEdges.forEach((routeEdge) => {
+        const groupKey = getRouteEdgeSameSideLaneGroupKey(routeEdge);
+        if (!groupKey) return;
+        sameSideLaneGroups.set(groupKey, [
+          ...(sameSideLaneGroups.get(groupKey) ?? []),
+          routeEdge,
+        ]);
+      });
+      sameSideLaneGroups.forEach((routeEdges) => {
+        [...routeEdges]
+          .sort((a, b) =>
+            getRouteEdgeSameSideLaneSortKey(a, routeNodeById).localeCompare(
+              getRouteEdgeSameSideLaneSortKey(b, routeNodeById)
+            )
+          )
+          .forEach((routeEdge, index) => {
+            sameSideLaneRankByRouteEdgeId.set(routeEdge.id, index);
+          });
+      });
+
+      state.routeEdges.forEach((routeEdge) => {
         const fromNode = routeNodeById.get(routeEdge.fromNodeId);
         const toNode = routeNodeById.get(routeEdge.toNodeId);
-        if (!fromNode || !toNode) return [];
+        if (!fromNode || !toNode) return;
+        const previousGeometries = geometries.map((geometry) => ({
+          geometry,
+          routeEdge: routeEdgeById.get(geometry.routeEdgeId),
+        }));
+        const softRouteObstacles = getRoutePathSegments(
+          previousGeometries
+            .filter(
+              ({ routeEdge: previousRouteEdge }) =>
+                previousRouteEdge &&
+                !routeEdgesShareTrackBundle(routeEdge, previousRouteEdge)
+            )
+            .map(({ geometry }) => geometry)
+        ).map((segment) => getRouteSegmentObstacleRect(segment, 8));
+        const trackOverlapObstacles = getRoutePathSegments(
+          previousGeometries
+            .filter(
+              ({ routeEdge: previousRouteEdge }) =>
+                previousRouteEdge &&
+                routeEdgesShareTrackBundle(routeEdge, previousRouteEdge)
+            )
+            .map(({ geometry }) => geometry)
+        ).map((segment) => getRouteSegmentObstacleRect(segment, 4));
         const routePoints = buildAutoRoutePoints(
           fromNode,
           toNode,
@@ -3100,21 +3434,24 @@ export const RouteNetworkEditor = ({
           routeEdge.toPortSide,
           routeEdge.fromPortIndex,
           routeEdge.toPortIndex,
-          state.routeNodes
+          state.routeNodes,
+          softRouteObstacles,
+          trackOverlapObstacles,
+          sameSideLaneRankByRouteEdgeId.get(routeEdge.id)
         );
-        return [
-          {
-            routeEdgeId: routeEdge.id,
-            fromNodeId: routeEdge.fromNodeId,
-            toNodeId: routeEdge.toNodeId,
-            bidirectional: routeEdge.bidirectional,
-            travelMinutes: routeEdge.travelMinutes,
-            routePoints,
-            labelPoint: getRouteLabelPoint(routePoints),
-          },
-        ];
-      }),
-    [routeNodeById, state.routeEdges, state.routeNodes]
+        geometries.push({
+          routeEdgeId: routeEdge.id,
+          fromNodeId: routeEdge.fromNodeId,
+          toNodeId: routeEdge.toNodeId,
+          bidirectional: routeEdge.bidirectional,
+          travelMinutes: routeEdge.travelMinutes,
+          routePoints,
+          labelPoint: getRouteLabelPoint(routePoints),
+        });
+      });
+      return geometries;
+    },
+    [routeEdgeById, routeNodeById, state.routeEdges, state.routeNodes]
   );
   const routeEdgeGeometryById = useMemo(
     () =>
@@ -3935,6 +4272,21 @@ export const RouteNetworkEditor = ({
 
   const getCanvasViewportCenter = () => {
     const viewport = canvasViewportRef.current;
+    const svg = svgRef.current;
+    if (viewport && svg) {
+      const matrix = svg.getScreenCTM();
+      if (matrix) {
+        const rect = viewport.getBoundingClientRect();
+        const point = svg.createSVGPoint();
+        point.x = rect.left + rect.width / 2;
+        point.y = rect.top + rect.height / 2;
+        const transformed = point.matrixTransform(matrix.inverse());
+        return {
+          x: Math.max(0, Math.min(canvasWidth, transformed.x)),
+          y: Math.max(0, Math.min(canvasHeight, transformed.y)),
+        };
+      }
+    }
     if (!viewport) {
       return {
         x: 120 + state.routeNodes.length * 24,
@@ -4595,22 +4947,29 @@ export const RouteNetworkEditor = ({
     if (!panel) return;
 
     const updateCanvasViewportHeight = () => {
-      setCanvasViewportHeight(
-        Math.max(700, Math.ceil(panel.getBoundingClientRect().height))
-      );
+      if (window.matchMedia(desktopCanvasPanelMediaQuery).matches) {
+        setCanvasViewportHeight(
+          Math.max(700, Math.ceil(panel.getBoundingClientRect().height))
+        );
+        return;
+      }
+      setCanvasViewportHeight(getCompactCanvasViewportHeight());
     };
 
     updateCanvasViewportHeight();
+    window.addEventListener("resize", updateCanvasViewportHeight);
 
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", updateCanvasViewportHeight);
       return () =>
         window.removeEventListener("resize", updateCanvasViewportHeight);
     }
 
     const resizeObserver = new ResizeObserver(updateCanvasViewportHeight);
     resizeObserver.observe(panel);
-    return () => resizeObserver.disconnect();
+    return () => {
+      window.removeEventListener("resize", updateCanvasViewportHeight);
+      resizeObserver.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -5034,22 +5393,22 @@ export const RouteNetworkEditor = ({
   }, [state.routeEdges]);
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl">路線図・運行経路エディタ</h2>
       </div>
 
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="relative">
+      <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="relative min-w-0">
           <div
             ref={canvasViewportRef}
-            className="min-h-[700px] overflow-auto overscroll-none rounded-lg bg-white p-2"
+            className="min-h-[420px] overflow-auto overscroll-contain rounded-lg bg-white p-1 sm:min-h-[520px] sm:p-2 2xl:min-h-[700px]"
             style={{ height: `${canvasViewportHeight}px` }}
           >
             <svg
               ref={svgRef}
               viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-              className="route-map-canvas block touch-none select-none rounded border bg-gray-50"
+              className="route-map-canvas block touch-auto select-none rounded border bg-gray-50"
               style={{
                 width: `${canvasWidth * canvasZoom}px`,
                 height: `${canvasHeight * canvasZoom}px`,
@@ -6562,8 +6921,11 @@ export const RouteNetworkEditor = ({
               })}
             </svg>
           </div>
-          <div className="absolute right-14 top-6 z-20 flex items-center gap-2 rounded border border-slate-300 bg-white/95 px-3 py-2 text-sm shadow dark:border-slate-600 dark:bg-slate-800/95">
-            <label htmlFor="route-read-direction" className="text-slate-700">
+          <div className="absolute left-3 right-3 top-3 z-20 flex flex-wrap items-center justify-between gap-2 rounded border border-slate-300 bg-white/95 px-3 py-2 text-sm shadow dark:border-slate-600 dark:bg-slate-800/95 sm:left-auto sm:right-14 sm:top-6 sm:justify-start">
+            <label
+              htmlFor="route-read-direction"
+              className="shrink-0 text-slate-700 dark:text-slate-100"
+            >
               読取方向
             </label>
             <select
@@ -6578,7 +6940,7 @@ export const RouteNetworkEditor = ({
                   },
                 })
               }
-              className="rounded border bg-white px-3 py-2"
+              className="min-w-0 flex-1 rounded border bg-white px-3 py-2 sm:flex-none"
             >
               {Object.entries(routeReadDirectionLabels).map(
                 ([value, label]) => (
@@ -6589,11 +6951,40 @@ export const RouteNetworkEditor = ({
               )}
             </select>
           </div>
+          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1 rounded border border-slate-300 bg-white/95 px-2 py-2 text-sm shadow dark:border-slate-600 dark:bg-slate-800/95">
+            <button
+              type="button"
+              onClick={() =>
+                setCanvasZoom((currentZoom) =>
+                  Math.max(minCanvasZoom, currentZoom / 1.15)
+                )
+              }
+              className="h-9 w-9 rounded bg-slate-700 text-lg font-bold leading-none text-white"
+              aria-label="縮小"
+            >
+              -
+            </button>
+            <span className="w-14 text-center text-xs font-medium text-slate-700 dark:text-slate-100">
+              {Math.round(canvasZoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setCanvasZoom((currentZoom) =>
+                  Math.min(maxCanvasZoom, currentZoom * 1.15)
+                )
+              }
+              className="h-9 w-9 rounded bg-slate-700 text-lg font-bold leading-none text-white"
+              aria-label="拡大"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <aside
           ref={routeMapPanelRef}
-          className="flex flex-col gap-4 rounded-lg bg-white p-4"
+          className="flex min-w-0 flex-col gap-4 rounded-lg bg-white p-3 sm:p-4"
         >
           <section className="flex flex-col gap-2">
             <h3 className="font-bold text-gray-700">ノード追加</h3>

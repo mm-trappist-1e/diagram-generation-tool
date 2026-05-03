@@ -8,7 +8,7 @@ type Props = {
 };
 
 export const StationMasterPanel = ({ state, dispatch }: Props) => (
-  <aside className="flex flex-col gap-4 rounded-lg bg-white p-4">
+  <aside className="flex min-w-0 flex-col gap-4 rounded-lg bg-white p-3 sm:p-4">
     <section className="flex flex-col gap-3">
       <h2 className="text-xl font-bold text-gray-800">Station</h2>
       <TextInput

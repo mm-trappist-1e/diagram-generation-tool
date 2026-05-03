@@ -259,8 +259,8 @@ export const DiagramChartSection = ({ state, isDarkTheme }: Props) => {
   return (
     <section className="flex flex-col gap-2">
       <h2 className="text-2xl">ダイヤグラム</h2>
-      <div className="flex flex-row gap-2 py-4">
-        <p>グラフの高さ:</p>
+      <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center">
+        <p className="shrink-0">グラフの高さ:</p>
         <input
           type="range"
           min="30"
@@ -272,26 +272,31 @@ export const DiagramChartSection = ({ state, isDarkTheme }: Props) => {
           className="grow"
         />
       </div>
-      <div className="box-border pr-6" style={{ height: `${height}vh` }}>
-        <Scatter
-          key={isDarkTheme ? "dark-chart" : "light-chart"}
-          options={options}
-          data={data}
-          plugins={[
-            {
-              id: "custom_canvas_background_color",
-              beforeDraw: (chart) => {
-                const { ctx } = chart;
-                ctx.save();
-                ctx.globalCompositeOperation = "destination-over";
-                ctx.fillStyle = chartBackgroundColor;
-                ctx.fillRect(0, 0, chart.width, chart.height);
-                ctx.restore();
+      <div className="overflow-x-auto">
+        <div
+          className="box-border min-w-[680px] pr-6"
+          style={{ height: `${height}vh` }}
+        >
+          <Scatter
+            key={isDarkTheme ? "dark-chart" : "light-chart"}
+            options={options}
+            data={data}
+            plugins={[
+              {
+                id: "custom_canvas_background_color",
+                beforeDraw: (chart) => {
+                  const { ctx } = chart;
+                  ctx.save();
+                  ctx.globalCompositeOperation = "destination-over";
+                  ctx.fillStyle = chartBackgroundColor;
+                  ctx.fillRect(0, 0, chart.width, chart.height);
+                  ctx.restore();
+                },
               },
-            },
-          ]}
-          className="rounded-xl"
-        />
+            ]}
+            className="rounded-xl"
+          />
+        </div>
       </div>
     </section>
   );

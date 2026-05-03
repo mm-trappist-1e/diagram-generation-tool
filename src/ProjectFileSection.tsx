@@ -73,14 +73,14 @@ export const ExportControls = ({
       <button
         type="button"
         onClick={downloadJson}
-        className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+        className="flex-1 rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 sm:flex-none"
       >
         Download JSON
       </button>
       <button
         type="button"
         onClick={downloadCsv}
-        className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+        className="flex-1 rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:flex-none"
       >
         Export CSV
       </button>

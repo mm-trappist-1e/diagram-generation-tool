@@ -1399,7 +1399,7 @@ export const TrainOperationSection = ({
       {renderRouteTemplateSection()}
 
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <section className="flex flex-col gap-2 rounded-lg bg-white p-4">
+        <section className="flex min-w-0 flex-col gap-2 rounded-lg bg-white p-3 sm:p-4">
           <h3 className="font-bold text-gray-700">列車一覧</h3>
           <TextInput
             placeholder="列車名を追加"
@@ -1471,7 +1471,7 @@ export const TrainOperationSection = ({
           </div>
         </section>
 
-        <section className="flex min-w-0 flex-col gap-4 rounded-lg bg-white p-4">
+        <section className="flex min-w-0 flex-col gap-4 rounded-lg bg-white p-3 sm:p-4">
           {selectedTrainRun ? (
             <>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

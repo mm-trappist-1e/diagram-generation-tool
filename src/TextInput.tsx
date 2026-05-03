@@ -45,13 +45,13 @@ export const TextInput = ({
   if (!addButtonLabel) return input;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       {input}
       <button
         type="button"
         disabled={!canSubmit}
         onClick={submitText}
-        className="rounded bg-blue-700 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+        className="rounded bg-blue-700 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 sm:shrink-0"
       >
         {addButtonLabel}
       </button>

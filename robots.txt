@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://diagram-generation-tool.pages.dev/sitemap.xml

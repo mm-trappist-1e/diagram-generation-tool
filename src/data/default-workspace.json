@@ -893,15 +893,15 @@
       ],
       "travelMinutes": 10,
       "segmentMinutes": [
-        5,
-        5
+        3,
+        7
       ],
       "speedProfiles": [
         {
           "travelMinutes": 10,
           "segmentMinutes": [
-            5,
-            5
+            3,
+            7
           ]
         }
       ],

@@ -3176,17 +3176,12 @@ export const RouteNetworkEditor = ({
   const canvasPinchStateRef = useRef<{
     lastDistance: number;
   } | null>(null);
-  const canvasPinchPendingRef = useRef<{
-    nextZoom: number;
-    anchorX: number;
-    anchorY: number;
-    viewportX: number;
-    viewportY: number;
-    distance: number;
-  } | null>(null);
-  const canvasPinchFrameRef = useRef<number | null>(null);
   const dragStateTouchRef = useRef<DragState | null>(null);
   const isTouchDraggingRef = useRef(false);
+  const canvasViewportStyleRef = useRef<{
+    overflow: string;
+    touchAction: string;
+  } | null>(null);
   const movedRef = useRef(false);
   const routeMapClipboardRef = useRef<RouteMapClipboard | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -4809,6 +4804,26 @@ export const RouteNetworkEditor = ({
     }
   };
 
+  const lockCanvasViewportScroll = () => {
+    const viewport = canvasViewportRef.current;
+    if (!viewport || canvasViewportStyleRef.current) return;
+    canvasViewportStyleRef.current = {
+      overflow: viewport.style.overflow,
+      touchAction: viewport.style.touchAction,
+    };
+    viewport.style.overflow = "hidden";
+    viewport.style.touchAction = "none";
+  };
+
+  const unlockCanvasViewportScroll = () => {
+    const viewport = canvasViewportRef.current;
+    const saved = canvasViewportStyleRef.current;
+    if (!viewport || !saved) return;
+    viewport.style.overflow = saved.overflow;
+    viewport.style.touchAction = saved.touchAction;
+    canvasViewportStyleRef.current = null;
+  };
+
   const onSvgTouchMove = (event: ReactTouchEvent<SVGSVGElement>) => {
     if (event.touches.length !== 1) return;
     const touch = event.touches[0];
@@ -4876,6 +4891,7 @@ export const RouteNetworkEditor = ({
     if (event.touches.length > 0) return;
     isTouchDraggingRef.current = false;
     dragStateTouchRef.current = null;
+    unlockCanvasViewportScroll();
     setDragState(null);
     setCanvasPanState(null);
     setSelectionState(null);
@@ -5056,45 +5072,11 @@ export const RouteNetworkEditor = ({
       };
     };
 
-    const clearPinchFrame = () => {
-      if (canvasPinchFrameRef.current !== null) {
-        cancelAnimationFrame(canvasPinchFrameRef.current);
-        canvasPinchFrameRef.current = null;
-      }
-      canvasPinchPendingRef.current = null;
-    };
-
-    const schedulePinchFrame = () => {
-      if (canvasPinchFrameRef.current !== null) return;
-      canvasPinchFrameRef.current = requestAnimationFrame(() => {
-        canvasPinchFrameRef.current = null;
-        const pending = canvasPinchPendingRef.current;
-        if (!pending) return;
-        const nextViewport = canvasViewportRef.current;
-        canvasZoomRef.current = pending.nextZoom;
-        setCanvasZoom(pending.nextZoom);
-        if (nextViewport) {
-          nextViewport.scrollLeft = Math.max(
-            0,
-            pending.anchorX * pending.nextZoom - pending.viewportX
-          );
-          nextViewport.scrollTop = Math.max(
-            0,
-            pending.anchorY * pending.nextZoom - pending.viewportY
-          );
-        }
-        if (canvasPinchStateRef.current) {
-          canvasPinchStateRef.current.lastDistance = pending.distance;
-        }
-      });
-    };
-
     const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length !== 2) return;
       event.preventDefault();
       event.stopPropagation();
-      clearPinchFrame();
-      const { midpointX, midpointY, distance } = getTouchMetrics(event.touches);
+      const { distance } = getTouchMetrics(event.touches);
       if (distance <= 0) return;
       canvasPinchStateRef.current = {
         lastDistance: distance,
@@ -5108,7 +5090,7 @@ export const RouteNetworkEditor = ({
       if (distance <= 0 || pinchState.lastDistance <= 0) return;
       event.preventDefault();
       event.stopPropagation();
-      if (Math.abs(distance - pinchState.lastDistance) < 0.5) return;
+      if (Math.abs(distance - pinchState.lastDistance) < 0.8) return;
       const rect = viewport.getBoundingClientRect();
       const viewportX = midpointX - rect.left;
       const viewportY = midpointY - rect.top;
@@ -5118,23 +5100,28 @@ export const RouteNetworkEditor = ({
         minCanvasZoom,
         Math.min(maxCanvasZoom, currentZoom * zoomFactor)
       );
+      if (Math.abs(nextZoom - currentZoom) < 0.001) {
+        pinchState.lastDistance = distance;
+        return;
+      }
       const anchorX = (viewport.scrollLeft + viewportX) / currentZoom;
       const anchorY = (viewport.scrollTop + viewportY) / currentZoom;
-      canvasPinchPendingRef.current = {
-        nextZoom,
-        anchorX,
-        anchorY,
-        viewportX,
-        viewportY,
-        distance,
-      };
-      schedulePinchFrame();
+      const svg = svgRef.current;
+      canvasZoomRef.current = nextZoom;
+      if (svg) {
+        svg.style.width = `${canvasWidth * nextZoom}px`;
+        svg.style.height = `${canvasHeight * nextZoom}px`;
+      }
+      viewport.scrollLeft = Math.max(0, anchorX * nextZoom - viewportX);
+      viewport.scrollTop = Math.max(0, anchorY * nextZoom - viewportY);
+      pinchState.lastDistance = distance;
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
+      if (!canvasPinchStateRef.current) return;
       if (event.touches.length >= 2) return;
       canvasPinchStateRef.current = null;
-      clearPinchFrame();
+      setCanvasZoom(canvasZoomRef.current);
     };
 
     viewport.addEventListener("touchstart", handleTouchStart, {
@@ -5341,6 +5328,7 @@ export const RouteNetworkEditor = ({
       }),
     };
     isTouchDraggingRef.current = true;
+    lockCanvasViewportScroll();
     dragStateTouchRef.current = nextDragState;
     setDragState(nextDragState);
   };

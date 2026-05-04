@@ -3182,6 +3182,11 @@ export const RouteNetworkEditor = ({
     overflow: string;
     touchAction: string;
   } | null>(null);
+  const pageScrollStyleRef = useRef<{
+    htmlOverflow: string;
+    bodyOverflow: string;
+    bodyTouchAction: string;
+  } | null>(null);
   const movedRef = useRef(false);
   const routeMapClipboardRef = useRef<RouteMapClipboard | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -4824,6 +4829,32 @@ export const RouteNetworkEditor = ({
     canvasViewportStyleRef.current = null;
   };
 
+  const lockPageScroll = () => {
+    if (typeof document === "undefined" || pageScrollStyleRef.current) return;
+    const html = document.documentElement;
+    const body = document.body;
+    pageScrollStyleRef.current = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyTouchAction: body.style.touchAction,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+  };
+
+  const unlockPageScroll = () => {
+    if (typeof document === "undefined") return;
+    const saved = pageScrollStyleRef.current;
+    if (!saved) return;
+    const html = document.documentElement;
+    const body = document.body;
+    html.style.overflow = saved.htmlOverflow;
+    body.style.overflow = saved.bodyOverflow;
+    body.style.touchAction = saved.bodyTouchAction;
+    pageScrollStyleRef.current = null;
+  };
+
   const onSvgTouchMove = (event: ReactTouchEvent<SVGSVGElement>) => {
     if (event.touches.length !== 1) return;
     const touch = event.touches[0];
@@ -4892,6 +4923,7 @@ export const RouteNetworkEditor = ({
     isTouchDraggingRef.current = false;
     dragStateTouchRef.current = null;
     unlockCanvasViewportScroll();
+    unlockPageScroll();
     setDragState(null);
     setCanvasPanState(null);
     setSelectionState(null);
@@ -5329,6 +5361,7 @@ export const RouteNetworkEditor = ({
     };
     isTouchDraggingRef.current = true;
     lockCanvasViewportScroll();
+    lockPageScroll();
     dragStateTouchRef.current = nextDragState;
     setDragState(nextDragState);
   };

@@ -158,6 +158,13 @@
     stroke: rgb(220 38 38);
   }
 
+  @media (pointer: coarse) {
+    html.dark .route-map-canvas .canvas-label-bg.canvas-invert {
+      filter: none;
+      fill: rgb(15 23 42);
+    }
+  }
+
   html.dark .route-map-canvas .canvas-timetable-text {
     filter: none;
     fill: rgb(255 255 255);

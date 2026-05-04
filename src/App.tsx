@@ -1,4 +1,4 @@
-import { Dispatch, useEffect, useState } from "react";
+import { ChangeEvent, Dispatch, useEffect, useState } from "react";
 import { DiagramChartSection } from "./DiagramChartSection";
 import { getDefaultWorkspaceState, getInitialState } from "./lib/initial-state";
 import { normalizeState } from "./lib/StateValidator";
@@ -271,6 +271,12 @@ export const App = () => {
     ) ?? workspaceStore.workspaces[0];
   const state = activeWorkspace.history.present;
   const workspaceCount = workspaceStore.workspaces.length;
+  const setActiveWorkspaceId = (workspaceId: string) => {
+    setWorkspaceStore((currentStore) => ({
+      ...currentStore,
+      activeWorkspaceId: workspaceId,
+    }));
+  };
   const dispatchHistoryAction = (action: HistoryAction) => {
     setWorkspaceStore((currentStore) => ({
       ...currentStore,
@@ -454,21 +460,16 @@ export const App = () => {
         </header>
 
         <section className="mx-3 flex min-w-0 flex-col gap-3 rounded-lg bg-white p-3 dark:bg-slate-800 sm:mx-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <span className="text-sm font-bold text-slate-700 dark:text-slate-100">
               ワークスペース
             </span>
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+            <div className="hidden min-w-0 flex-1 flex-wrap gap-2 sm:flex">
               {workspaceStore.workspaces.map((workspace) => (
                 <button
                   key={workspace.id}
                   type="button"
-                  onClick={() =>
-                    setWorkspaceStore((currentStore) => ({
-                      ...currentStore,
-                      activeWorkspaceId: workspace.id,
-                    }))
-                  }
+                  onClick={() => setActiveWorkspaceId(workspace.id)}
                   className={`max-w-[220px] truncate rounded border px-3 py-2 text-sm ${
                     workspace.id === activeWorkspace.id
                       ? "border-blue-700 bg-blue-50 font-bold text-blue-950 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-50"
@@ -479,28 +480,49 @@ export const App = () => {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addWorkspace}
-              className="flex-1 rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950 sm:flex-none"
-            >
-              新規
-            </button>
-            <button
-              type="button"
-              onClick={duplicateWorkspace}
-              className="flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700 sm:flex-none"
-            >
-              複製
-            </button>
-            <button
-              type="button"
-              disabled={workspaceCount <= 1}
-              onClick={removeActiveWorkspace}
-              className="flex-1 rounded border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:border-red-500 dark:bg-slate-900 dark:text-red-200 dark:hover:bg-red-950 dark:disabled:border-slate-700 dark:disabled:text-slate-500 sm:flex-none"
-            >
-              削除
-            </button>
+            <div className="w-full sm:hidden">
+              <label htmlFor="workspace-select" className="sr-only">
+                ワークスペース
+              </label>
+              <select
+                id="workspace-select"
+                value={activeWorkspace.id}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                  setActiveWorkspaceId(event.target.value)
+                }
+                className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              >
+                {workspaceStore.workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name || "名称未設定"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={addWorkspace}
+                className="flex-1 rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950 sm:flex-none"
+              >
+                新規
+              </button>
+              <button
+                type="button"
+                onClick={duplicateWorkspace}
+                className="flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700 sm:flex-none"
+              >
+                複製
+              </button>
+              <button
+                type="button"
+                disabled={workspaceCount <= 1}
+                onClick={removeActiveWorkspace}
+                className="flex-1 rounded border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:border-red-500 dark:bg-slate-900 dark:text-red-200 dark:hover:bg-red-950 dark:disabled:border-slate-700 dark:disabled:text-slate-500 sm:flex-none"
+              >
+                削除
+              </button>
+            </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-[minmax(220px,360px)_minmax(0,1fr)_auto] lg:items-end">
             <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-100">

@@ -2,6 +2,7 @@ import {
   ChangeEvent,
   Dispatch,
   MouseEvent,
+  TouchEvent as ReactTouchEvent,
   useEffect,
   useMemo,
   useRef,
@@ -3178,6 +3179,16 @@ export const RouteNetworkEditor = ({
     contentX: number;
     contentY: number;
   } | null>(null);
+  const canvasPinchPendingRef = useRef<{
+    nextZoom: number;
+    viewportX: number;
+    viewportY: number;
+    contentX: number;
+    contentY: number;
+    startZoom: number;
+    distance: number;
+  } | null>(null);
+  const canvasPinchFrameRef = useRef<number | null>(null);
   const movedRef = useRef(false);
   const routeMapClipboardRef = useRef<RouteMapClipboard | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -3801,17 +3812,20 @@ export const RouteNetworkEditor = ({
         getRouteEdgeSetKey(routeTimeDraft?.routeEdgeIds ?? [])
     );
 
-  const getSvgPoint = (event: MouseEvent<Element>) => {
+  const getSvgPointFromClient = (clientX: number, clientY: number) => {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
     const matrix = svg.getScreenCTM();
     if (!matrix) return { x: 0, y: 0 };
     const point = svg.createSVGPoint();
-    point.x = event.clientX;
-    point.y = event.clientY;
+    point.x = clientX;
+    point.y = clientY;
     const transformed = point.matrixTransform(matrix.inverse());
     return { x: transformed.x, y: transformed.y };
   };
+
+  const getSvgPoint = (event: MouseEvent<Element>) =>
+    getSvgPointFromClient(event.clientX, event.clientY);
 
   const getNearestRouteEdgeSegment = (routePoints: Point[], point: Point) => {
     const points = compactPoints(routePoints);
@@ -4797,6 +4811,73 @@ export const RouteNetworkEditor = ({
     }
   };
 
+  const onSvgTouchMove = (event: ReactTouchEvent<SVGSVGElement>) => {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (canvasPanState) {
+      event.preventDefault();
+      movedRef.current = true;
+      const viewport = canvasViewportRef.current;
+      if (viewport) {
+        viewport.scrollLeft =
+          canvasPanState.scrollLeft - (touch.clientX - canvasPanState.clientX);
+        viewport.scrollTop =
+          canvasPanState.scrollTop - (touch.clientY - canvasPanState.clientY);
+      }
+      return;
+    }
+
+    const point = getSvgPointFromClient(touch.clientX, touch.clientY);
+    if (branchInsertDragState) {
+      event.preventDefault();
+      movedRef.current = true;
+      setBranchInsertDragState({
+        ...branchInsertDragState,
+        currentPoint: point,
+      });
+    }
+    if (dragState) {
+      event.preventDefault();
+      movedRef.current = true;
+      dragState.nodes.forEach((node) => {
+        const routeNode = routeNodeById.get(node.nodeId);
+        if (!routeNode) return;
+        const position = snapNodePosition(routeNode, {
+          x: point.x - node.offsetX,
+          y: point.y - node.offsetY,
+        });
+        dispatch({
+          type: "updateRouteNode",
+          historyGroup: dragState.historyGroup,
+          payload: {
+            id: node.nodeId,
+            x: position.x,
+            y: position.y,
+          },
+        });
+      });
+    }
+    if (selectionState) {
+      event.preventDefault();
+      movedRef.current = true;
+      setSelectionState({ ...selectionState, current: point });
+    }
+    if (connectState) {
+      event.preventDefault();
+      setConnectState({ ...connectState, x: point.x, y: point.y });
+    }
+  };
+
+  const onSvgTouchEnd = (event: ReactTouchEvent<SVGSVGElement>) => {
+    if (event.touches.length > 0) return;
+    setDragState(null);
+    setCanvasPanState(null);
+    setSelectionState(null);
+    setBranchInsertDragState(null);
+    setConnectState(null);
+  };
+
   const onSvgMouseDown = (event: MouseEvent<SVGSVGElement>) => {
     if (
       !isRouteTimeMode &&
@@ -4970,10 +5051,50 @@ export const RouteNetworkEditor = ({
       };
     };
 
+    const clearPinchFrame = () => {
+      if (canvasPinchFrameRef.current !== null) {
+        cancelAnimationFrame(canvasPinchFrameRef.current);
+        canvasPinchFrameRef.current = null;
+      }
+      canvasPinchPendingRef.current = null;
+    };
+
+    const schedulePinchFrame = () => {
+      if (canvasPinchFrameRef.current !== null) return;
+      canvasPinchFrameRef.current = requestAnimationFrame(() => {
+        canvasPinchFrameRef.current = null;
+        const pending = canvasPinchPendingRef.current;
+        if (!pending) return;
+        const scale = pending.nextZoom / pending.startZoom;
+        const nextViewport = canvasViewportRef.current;
+        if (nextViewport) {
+          nextViewport.scrollLeft = Math.max(
+            0,
+            pending.contentX * scale - pending.viewportX
+          );
+          nextViewport.scrollTop = Math.max(
+            0,
+            pending.contentY * scale - pending.viewportY
+          );
+        }
+        canvasZoomRef.current = pending.nextZoom;
+        setCanvasZoom(pending.nextZoom);
+        if (nextViewport && canvasPinchStateRef.current) {
+          canvasPinchStateRef.current = {
+            startDistance: pending.distance,
+            startZoom: pending.nextZoom,
+            contentX: nextViewport.scrollLeft + pending.viewportX,
+            contentY: nextViewport.scrollTop + pending.viewportY,
+          };
+        }
+      });
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length !== 2) return;
       event.preventDefault();
       event.stopPropagation();
+      clearPinchFrame();
       const { midpointX, midpointY, distance } = getTouchMetrics(event.touches);
       if (distance <= 0) return;
       const rect = viewport.getBoundingClientRect();
@@ -5004,25 +5125,22 @@ export const RouteNetworkEditor = ({
           pinchState.startZoom * (distance / pinchState.startDistance)
         )
       );
-      const scale = nextZoom / pinchState.startZoom;
-      requestAnimationFrame(() => {
-        const nextViewport = canvasViewportRef.current;
-        if (!nextViewport) return;
-        nextViewport.scrollLeft = Math.max(
-          0,
-          pinchState.contentX * scale - viewportX
-        );
-        nextViewport.scrollTop = Math.max(
-          0,
-          pinchState.contentY * scale - viewportY
-        );
-      });
-      setCanvasZoom(nextZoom);
+      canvasPinchPendingRef.current = {
+        nextZoom,
+        viewportX,
+        viewportY,
+        contentX: pinchState.contentX,
+        contentY: pinchState.contentY,
+        startZoom: pinchState.startZoom,
+        distance,
+      };
+      schedulePinchFrame();
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
       if (event.touches.length >= 2) return;
       canvasPinchStateRef.current = null;
+      clearPinchFrame();
     };
 
     viewport.addEventListener("touchstart", handleTouchStart, {
@@ -5178,6 +5296,38 @@ export const RouteNetworkEditor = ({
       return;
     }
 
+    const nodeIds =
+      selectedNodeIds.has(routeNode.id) && selectedNodeIds.size > 1
+        ? [...selectedNodeIds]
+        : [routeNode.id];
+    setDragState({
+      historyGroup: createId("drag"),
+      nodes: nodeIds.flatMap((nodeId) => {
+        const node = routeNodeById.get(nodeId);
+        if (!node) return [];
+        return [
+          {
+            nodeId,
+            offsetX: point.x - node.x,
+            offsetY: point.y - node.y,
+          },
+        ];
+      }),
+    });
+  };
+
+  const onNodeTouchStart = (
+    event: ReactTouchEvent<SVGGElement>,
+    routeNode: RouteNode
+  ) => {
+    if (event.touches.length !== 1) return;
+    event.stopPropagation();
+    if (isRouteTimeMode || isRouteTemplateMode) return;
+    event.preventDefault();
+    movedRef.current = false;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const point = getSvgPointFromClient(touch.clientX, touch.clientY);
     const nodeIds =
       selectedNodeIds.has(routeNode.id) && selectedNodeIds.size > 1
         ? [...selectedNodeIds]
@@ -5521,6 +5671,9 @@ export const RouteNetworkEditor = ({
               onMouseMove={onSvgMouseMove}
               onMouseUp={onSvgMouseUp}
               onMouseLeave={onSvgMouseUp}
+              onTouchMove={onSvgTouchMove}
+              onTouchEnd={onSvgTouchEnd}
+              onTouchCancel={onSvgTouchEnd}
               onContextMenu={(event) => {
                 event.preventDefault();
                 if (event.ctrlKey && activeSelectedNodeIds.length > 0) {
@@ -5841,11 +5994,11 @@ export const RouteNetworkEditor = ({
                               : "transparent"
                           }
                           strokeWidth={isSelected || isRangeSelected ? 2 : 0}
-                          className={
+                          className={`canvas-label-bg ${
                             isSelected || isRangeSelected
                               ? "canvas-selected-label-box"
                               : "canvas-invert"
-                          }
+                          }`}
                         />
                         <text
                           x={labelPlacement.x}
@@ -6241,6 +6394,9 @@ export const RouteNetworkEditor = ({
                     key={routeNode.id}
                     transform={`translate(${routeNode.x}, ${routeNode.y})`}
                     onMouseDown={(event) => onNodeMouseDown(event, routeNode)}
+                    onTouchStart={(event) =>
+                      onNodeTouchStart(event, routeNode)
+                    }
                     onMouseUp={(event) => onNodeMouseUp(event, routeNode)}
                     onContextMenu={(event) =>
                       onNodeContextMenu(event, routeNode)
@@ -6918,11 +7074,11 @@ export const RouteNetworkEditor = ({
                                   isHighlightedRouteTimeEndpoint ? 1.8 : 0
                                 }
                                 pointerEvents="none"
-                                className={
+                                className={`canvas-label-bg ${
                                   isHighlightedRouteTimeEndpoint
                                     ? "canvas-selected-label-box"
                                     : "canvas-invert"
-                                }
+                                }`}
                               />
                               <text
                                 x={platformLabelTextX}
@@ -6988,7 +7144,7 @@ export const RouteNetworkEditor = ({
                             rx={4}
                             fill="#ffffff"
                             fillOpacity={0.86}
-                            className="canvas-invert"
+                            className="canvas-invert canvas-label-bg"
                           />
                           {headerText ? (
                             <text

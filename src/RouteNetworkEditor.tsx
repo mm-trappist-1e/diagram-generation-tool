@@ -3174,18 +3174,24 @@ export const RouteNetworkEditor = ({
   const routeMapPanelRef = useRef<HTMLElement>(null);
   const canvasZoomRef = useRef(getInitialCanvasZoom());
   const canvasPinchStateRef = useRef<{
-    lastDistance: number;
+    startDistance: number;
+    startZoom: number;
+    anchorX: number;
+    anchorY: number;
   } | null>(null);
   const dragStateTouchRef = useRef<DragState | null>(null);
   const isTouchDraggingRef = useRef(false);
   const canvasViewportStyleRef = useRef<{
     overflow: string;
     touchAction: string;
+    overscrollBehavior: string;
   } | null>(null);
   const pageScrollStyleRef = useRef<{
     htmlOverflow: string;
+    htmlOverscrollBehavior: string;
     bodyOverflow: string;
     bodyTouchAction: string;
+    bodyOverscrollBehavior: string;
   } | null>(null);
   const movedRef = useRef(false);
   const routeMapClipboardRef = useRef<RouteMapClipboard | null>(null);
@@ -4815,9 +4821,11 @@ export const RouteNetworkEditor = ({
     canvasViewportStyleRef.current = {
       overflow: viewport.style.overflow,
       touchAction: viewport.style.touchAction,
+      overscrollBehavior: viewport.style.overscrollBehavior,
     };
     viewport.style.overflow = "hidden";
     viewport.style.touchAction = "none";
+    viewport.style.overscrollBehavior = "none";
   };
 
   const unlockCanvasViewportScroll = () => {
@@ -4826,6 +4834,7 @@ export const RouteNetworkEditor = ({
     if (!viewport || !saved) return;
     viewport.style.overflow = saved.overflow;
     viewport.style.touchAction = saved.touchAction;
+    viewport.style.overscrollBehavior = saved.overscrollBehavior;
     canvasViewportStyleRef.current = null;
   };
 
@@ -4835,12 +4844,16 @@ export const RouteNetworkEditor = ({
     const body = document.body;
     pageScrollStyleRef.current = {
       htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
       bodyOverflow: body.style.overflow,
       bodyTouchAction: body.style.touchAction,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
     };
     html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.touchAction = "none";
+    body.style.overscrollBehavior = "none";
   };
 
   const unlockPageScroll = () => {
@@ -4850,9 +4863,34 @@ export const RouteNetworkEditor = ({
     const html = document.documentElement;
     const body = document.body;
     html.style.overflow = saved.htmlOverflow;
+    html.style.overscrollBehavior = saved.htmlOverscrollBehavior;
     body.style.overflow = saved.bodyOverflow;
     body.style.touchAction = saved.bodyTouchAction;
+    body.style.overscrollBehavior = saved.bodyOverscrollBehavior;
     pageScrollStyleRef.current = null;
+  };
+
+  const onSvgTouchStart = (event: ReactTouchEvent<SVGSVGElement>) => {
+    if (event.touches.length === 0) return;
+    lockCanvasViewportScroll();
+    lockPageScroll();
+    if (event.touches.length !== 1) return;
+    if (event.target !== svgRef.current) return;
+    const touch = event.touches[0];
+    const viewport = canvasViewportRef.current;
+    if (!touch || !viewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    movedRef.current = false;
+    setCanvasPanState({
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    });
+    setSelectionState(null);
+    setDragState(null);
+    setConnectState(null);
   };
 
   const onSvgTouchMove = (event: ReactTouchEvent<SVGSVGElement>) => {
@@ -5108,45 +5146,61 @@ export const RouteNetworkEditor = ({
       if (event.touches.length !== 2) return;
       event.preventDefault();
       event.stopPropagation();
-      const { distance } = getTouchMetrics(event.touches);
+      const { midpointX, midpointY, distance } = getTouchMetrics(
+        event.touches
+      );
       if (distance <= 0) return;
+      const rect = viewport.getBoundingClientRect();
+      const viewportX = midpointX - rect.left;
+      const viewportY = midpointY - rect.top;
+      const currentZoom = canvasZoomRef.current;
       canvasPinchStateRef.current = {
-        lastDistance: distance,
+        startDistance: distance,
+        startZoom: currentZoom,
+        anchorX: (viewport.scrollLeft + viewportX) / currentZoom,
+        anchorY: (viewport.scrollTop + viewportY) / currentZoom,
       };
+      setCanvasPanState(null);
+      lockCanvasViewportScroll();
+      lockPageScroll();
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       const pinchState = canvasPinchStateRef.current;
       if (!pinchState || event.touches.length !== 2) return;
       const { midpointX, midpointY, distance } = getTouchMetrics(event.touches);
-      if (distance <= 0 || pinchState.lastDistance <= 0) return;
+      if (distance <= 0 || pinchState.startDistance <= 0) return;
       event.preventDefault();
       event.stopPropagation();
-      if (Math.abs(distance - pinchState.lastDistance) < 0.8) return;
+      if (Math.abs(distance - pinchState.startDistance) < 0.8) return;
       const rect = viewport.getBoundingClientRect();
       const viewportX = midpointX - rect.left;
       const viewportY = midpointY - rect.top;
       const currentZoom = canvasZoomRef.current;
-      const zoomFactor = distance / pinchState.lastDistance;
       const nextZoom = Math.max(
         minCanvasZoom,
-        Math.min(maxCanvasZoom, currentZoom * zoomFactor)
+        Math.min(
+          maxCanvasZoom,
+          pinchState.startZoom * (distance / pinchState.startDistance)
+        )
       );
       if (Math.abs(nextZoom - currentZoom) < 0.001) {
-        pinchState.lastDistance = distance;
         return;
       }
-      const anchorX = (viewport.scrollLeft + viewportX) / currentZoom;
-      const anchorY = (viewport.scrollTop + viewportY) / currentZoom;
       const svg = svgRef.current;
       canvasZoomRef.current = nextZoom;
       if (svg) {
         svg.style.width = `${canvasWidth * nextZoom}px`;
         svg.style.height = `${canvasHeight * nextZoom}px`;
       }
-      viewport.scrollLeft = Math.max(0, anchorX * nextZoom - viewportX);
-      viewport.scrollTop = Math.max(0, anchorY * nextZoom - viewportY);
-      pinchState.lastDistance = distance;
+      viewport.scrollLeft = Math.max(
+        0,
+        pinchState.anchorX * nextZoom - viewportX
+      );
+      viewport.scrollTop = Math.max(
+        0,
+        pinchState.anchorY * nextZoom - viewportY
+      );
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
@@ -5154,6 +5208,10 @@ export const RouteNetworkEditor = ({
       if (event.touches.length >= 2) return;
       canvasPinchStateRef.current = null;
       setCanvasZoom(canvasZoomRef.current);
+      if (event.touches.length === 0) {
+        unlockCanvasViewportScroll();
+        unlockPageScroll();
+      }
     };
 
     viewport.addEventListener("touchstart", handleTouchStart, {
@@ -5673,13 +5731,13 @@ export const RouteNetworkEditor = ({
         <div className="relative min-w-0">
           <div
             ref={canvasViewportRef}
-            className="min-h-[420px] overflow-auto overscroll-contain rounded-lg bg-white p-1 sm:min-h-[520px] sm:p-2 2xl:min-h-[700px]"
+            className="route-map-viewport min-h-[420px] overflow-auto overscroll-contain rounded-lg bg-white p-1 sm:min-h-[520px] sm:p-2 2xl:min-h-[700px]"
             style={{ height: `${canvasViewportHeight}px` }}
           >
             <svg
               ref={svgRef}
               viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-              className="route-map-canvas block touch-auto select-none rounded border bg-gray-50"
+              className="route-map-canvas block touch-none select-none rounded border bg-gray-50"
               style={{
                 width: `${canvasWidth * canvasZoom}px`,
                 height: `${canvasHeight * canvasZoom}px`,
@@ -5689,6 +5747,7 @@ export const RouteNetworkEditor = ({
               onMouseMove={onSvgMouseMove}
               onMouseUp={onSvgMouseUp}
               onMouseLeave={onSvgMouseUp}
+              onTouchStart={onSvgTouchStart}
               onTouchMove={onSvgTouchMove}
               onTouchEnd={onSvgTouchEnd}
               onTouchCancel={onSvgTouchEnd}

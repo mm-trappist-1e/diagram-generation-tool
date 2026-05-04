@@ -53,6 +53,17 @@
 }
 
 @layer utilities {
+  .route-map-viewport {
+    overscroll-behavior: contain;
+  }
+
+  @media (pointer: coarse) {
+    .route-map-viewport,
+    .route-map-canvas {
+      touch-action: none;
+    }
+  }
+
   html.dark .bg-white {
     background-color: rgb(30 41 59);
   }

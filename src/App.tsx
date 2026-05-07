@@ -1,4 +1,4 @@
-import { ChangeEvent, Dispatch, useEffect, useState } from "react";
+import { Dispatch, useEffect, useState } from "react";
 import { DiagramChartSection } from "./DiagramChartSection";
 import { getDefaultWorkspaceState, getInitialState } from "./lib/initial-state";
 import { normalizeState } from "./lib/StateValidator";
@@ -6,9 +6,8 @@ import { createId, TrainRouteKey } from "./lib/domain";
 import { ExportControls, ProjectFileSection } from "./ProjectFileSection";
 import { Actions, reducer, State } from "./reducer/reducer";
 import { RouteNetworkEditor } from "./RouteNetworkEditor";
-import { StationMasterPanel } from "./StationMasterPanel";
 import { TrainOperationSection } from "./TrainOperationSection";
-import { SiteMetaFooter, UsageGuide } from "./UsageGuide";
+import { SiteMetaFooter } from "./UsageGuide";
 
 const legacyLocalStorageKey = "diagram-generation-tool:a-train-state-v3";
 const legacyLocalStorageBackupKey = `${legacyLocalStorageKey}:last-good`;
@@ -56,6 +55,22 @@ type StoredWorkspaceStore = {
   activeWorkspaceId: string;
   workspaces: StoredWorkspace[];
 };
+
+const CopyIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="h-5 w-5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="8" y="8" width="11" height="11" rx="2" />
+    <path d="M5 16H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
 
 const handleBeforeUnloadEvent = (event: BeforeUnloadEvent) => {
   event.preventDefault();
@@ -296,6 +311,8 @@ export const App = () => {
   const [routeTemplateEditKey, setRouteTemplateEditKey] =
     useState<TrainRouteKey>("serviceRouteSections");
   const [isDarkTheme, setIsDarkTheme] = useState(loadInitialDarkTheme);
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState("");
+  const [workspaceNameDraft, setWorkspaceNameDraft] = useState("");
 
   const createWorkspaceName = () => {
     let index = workspaceCount + 1;
@@ -325,30 +342,52 @@ export const App = () => {
     }));
   };
 
-  const renameActiveWorkspace = (name: string) => {
+  const renameWorkspace = (workspaceId: string, name: string) => {
     setWorkspaceStore((currentStore) => ({
       ...currentStore,
       workspaces: currentStore.workspaces.map((workspace) =>
-        workspace.id === currentStore.activeWorkspaceId
+        workspace.id === workspaceId
           ? { ...workspace, name }
           : workspace
       ),
     }));
   };
 
-  const removeActiveWorkspace = () => {
+  const startRenamingWorkspace = (workspace: Workspace) => {
+    setActiveWorkspaceId(workspace.id);
+    setEditingWorkspaceId(workspace.id);
+    setWorkspaceNameDraft(workspace.name);
+  };
+
+  const commitWorkspaceRename = () => {
+    if (!editingWorkspaceId) return;
+    renameWorkspace(editingWorkspaceId, workspaceNameDraft);
+    setEditingWorkspaceId("");
+    setWorkspaceNameDraft("");
+  };
+
+  const cancelWorkspaceRename = () => {
+    setEditingWorkspaceId("");
+    setWorkspaceNameDraft("");
+  };
+
+  const removeWorkspace = (workspaceId: string) => {
     if (workspaceCount <= 1) return;
+    if (editingWorkspaceId === workspaceId) cancelWorkspaceRename();
     setWorkspaceStore((currentStore) => {
       const currentIndex = currentStore.workspaces.findIndex(
-        (workspace) => workspace.id === currentStore.activeWorkspaceId
+        (workspace) => workspace.id === workspaceId
       );
       const workspaces = currentStore.workspaces.filter(
-        (workspace) => workspace.id !== currentStore.activeWorkspaceId
+        (workspace) => workspace.id !== workspaceId
       );
       const nextActiveWorkspace =
         workspaces[Math.max(0, Math.min(currentIndex, workspaces.length - 1))];
       return {
-        activeWorkspaceId: nextActiveWorkspace.id,
+        activeWorkspaceId:
+          currentStore.activeWorkspaceId === workspaceId
+            ? nextActiveWorkspace.id
+            : currentStore.activeWorkspaceId,
         workspaces,
       };
     });
@@ -411,10 +450,18 @@ export const App = () => {
   }, [workspaceStore]);
 
   useEffect(() => {
-    setSelectedTrainRunId("");
+    setSelectedTrainRunId(state.trainRuns[0]?.id ?? "");
     setSelectedRouteTemplateId("");
     setRouteTemplateEditKey("serviceRouteSections");
   }, [workspaceStore.activeWorkspaceId]);
+
+  useEffect(() => {
+    setSelectedTrainRunId((currentTrainRunId) =>
+      state.trainRuns.some((trainRun) => trainRun.id === currentTrainRunId)
+        ? currentTrainRunId
+        : state.trainRuns[0]?.id ?? ""
+    );
+  }, [state.trainRuns]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -446,7 +493,7 @@ export const App = () => {
       <div className="m-0 flex flex-col gap-3 rounded-none bg-slate-100 py-3 dark:bg-slate-900 sm:m-4 sm:gap-4 sm:rounded-lg sm:py-4">
         <header className="relative px-3 sm:px-4">
           <h1 className="text-center text-2xl font-semibold text-gray-900 dark:text-slate-100 sm:text-4xl">
-            A列車向けダイヤグラム生成
+            ダイヤグラム生成ツール
           </h1>
           <div className="mt-3 flex flex-wrap justify-center gap-2 lg:absolute lg:right-4 lg:top-0 lg:mt-0 lg:justify-end">
             <button
@@ -454,123 +501,140 @@ export const App = () => {
               onClick={() => setIsDarkTheme((enabled) => !enabled)}
               className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
             >
-              {isDarkTheme ? "ライト" : "ダーク"}
+              {isDarkTheme ? "ライトテーマ" : "グレーテーマ"}
             </button>
           </div>
         </header>
 
-        <section className="mx-3 flex min-w-0 flex-col gap-3 rounded-lg bg-white p-3 dark:bg-slate-800 sm:mx-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-100">
-              ワークスペース
-            </span>
-            <div className="hidden min-w-0 flex-1 flex-wrap gap-2 sm:flex">
-              {workspaceStore.workspaces.map((workspace) => (
-                <button
-                  key={workspace.id}
-                  type="button"
-                  onClick={() => setActiveWorkspaceId(workspace.id)}
-                  className={`max-w-[220px] truncate rounded border px-3 py-2 text-sm ${
-                    workspace.id === activeWorkspace.id
-                      ? "border-blue-700 bg-blue-50 font-bold text-blue-950 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-50"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {workspace.name || "名称未設定"}
-                </button>
-              ))}
-            </div>
-            <div className="w-full sm:hidden">
-              <label htmlFor="workspace-select" className="sr-only">
-                ワークスペース
-              </label>
-              <select
-                id="workspace-select"
-                value={activeWorkspace.id}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                  setActiveWorkspaceId(event.target.value)
-                }
-                className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                {workspaceStore.workspaces.map((workspace) => (
-                  <option key={workspace.id} value={workspace.id}>
-                    {workspace.name || "名称未設定"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2 sm:ml-auto">
-              <button
-                type="button"
-                onClick={addWorkspace}
-                className="flex-1 rounded border border-blue-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950 sm:flex-none"
-              >
-                新規
-              </button>
-              <button
-                type="button"
-                onClick={duplicateWorkspace}
-                className="flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700 sm:flex-none"
-              >
-                複製
-              </button>
-              <button
-                type="button"
-                disabled={workspaceCount <= 1}
-                onClick={removeActiveWorkspace}
-                className="flex-1 rounded border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:border-red-500 dark:bg-slate-900 dark:text-red-200 dark:hover:bg-red-950 dark:disabled:border-slate-700 dark:disabled:text-slate-500 sm:flex-none"
-              >
-                削除
-              </button>
-            </div>
-          </div>
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,360px)_minmax(0,1fr)_auto] lg:items-end">
-            <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-100">
-              ワークスペース名
-              <input
-                type="text"
-                value={activeWorkspace.name}
-                onChange={(event) => renameActiveWorkspace(event.target.value)}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </label>
-            <p className="text-sm text-slate-500 dark:text-slate-300">
-              新規を押すと、現在のデータを残したまま空のワークスペースを開始できます。
-            </p>
-            <ExportControls
-              state={state}
-              fileNamePrefix={activeWorkspace.name || "workspace"}
-            />
-          </div>
-        </section>
-
-        <div className="grid min-w-0 gap-4 px-3 sm:px-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <StationMasterPanel state={state} dispatch={dispatch} />
+        <div className="min-w-0 px-3 sm:px-4">
           <main className="flex min-w-0 flex-col gap-8">
+            <section className="flex min-w-0 flex-col gap-0">
+            <section className="min-w-0 rounded-t-lg border border-b-0 border-slate-300 bg-slate-200 dark:border-slate-700 dark:bg-[#202124]">
+              <div className="flex min-w-0 items-end gap-1 px-2 pt-2">
+                {workspaceStore.workspaces.map((workspace) => {
+                  const isActive = workspace.id === activeWorkspace.id;
+                  const isEditing = workspace.id === editingWorkspaceId;
+                  return (
+                    <div
+                      key={workspace.id}
+                      className={`group flex h-11 min-w-0 flex-[1_1_0] max-w-[260px] items-center gap-1 rounded-t-xl border px-2 text-sm shadow-sm transition-colors ${
+                        isActive
+                          ? "relative z-10 translate-y-px border-transparent border-b-0 bg-white text-slate-950 shadow-none dark:bg-slate-800 dark:text-slate-100"
+                          : "border-transparent bg-slate-300/80 text-slate-700 hover:bg-slate-100 dark:bg-[#111827] dark:text-slate-400 dark:hover:bg-[#172033]"
+                      }`}
+                      role="tab"
+                      aria-selected={isActive}
+                    >
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          value={workspaceNameDraft}
+                          onChange={(event) =>
+                            setWorkspaceNameDraft(event.target.value)
+                          }
+                          onBlur={commitWorkspaceRename}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitWorkspaceRename();
+                            }
+                          }}
+                          className="min-w-0 flex-1 rounded border border-blue-400 bg-white px-2 py-1 text-sm text-slate-900 outline-none dark:bg-slate-950 dark:text-slate-100"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActiveWorkspaceId(workspace.id)}
+                          className="min-w-0 flex-1 truncate px-1 py-2 text-left"
+                          title={workspace.name || "名称未設定"}
+                        >
+                          {workspace.name || "名称未設定"}
+                        </button>
+                      )}
+                      {!isEditing ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            startRenamingWorkspace(workspace);
+                          }}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-500 opacity-80 hover:bg-slate-200 hover:text-blue-700 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-blue-200"
+                          aria-label={`${workspace.name || "名称未設定"}の名称変更`}
+                          title="名称変更"
+                        >
+                          ✎
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={workspaceCount <= 1}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeWorkspace(workspace.id);
+                        }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-lg leading-none text-slate-500 hover:bg-slate-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-red-200"
+                        aria-label={`${workspace.name || "名称未設定"}を閉じる`}
+                        title="閉じる"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={addWorkspace}
+                  className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-3xl leading-none text-slate-600 hover:bg-slate-100 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-[#3a3b3f] dark:hover:text-blue-200"
+                  aria-label="ワークスペースを追加"
+                  title="新規ワークスペース"
+                >
+                  +
+                </button>
+                <div className="ml-auto flex shrink-0 items-center gap-2 pb-1 pl-2">
+                  <button
+                    type="button"
+                    onClick={duplicateWorkspace}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
+                    aria-label="ワークスペースを複製"
+                    title="複製"
+                  >
+                    <CopyIcon />
+                  </button>
+                  <ExportControls
+                    state={state}
+                    fileNamePrefix={activeWorkspace.name || "workspace"}
+                    className="whitespace-nowrap"
+                  />
+                </div>
+              </div>
+            </section>
             <RouteNetworkEditor
               state={state}
               dispatch={dispatch}
+              workspaceName={activeWorkspace.name}
               selectedTrainRunId={selectedTrainRunId}
               selectedRouteTemplateId={selectedRouteTemplateId}
               setSelectedRouteTemplateId={setSelectedRouteTemplateId}
               routeTemplateEditKey={routeTemplateEditKey}
               setRouteTemplateEditKey={setRouteTemplateEditKey}
             />
+            </section>
             <TrainOperationSection
               state={state}
               dispatch={dispatch}
               selectedTrainRunId={selectedTrainRunId}
               setSelectedTrainRunId={setSelectedTrainRunId}
-              selectedRouteTemplateId={selectedRouteTemplateId}
-              setSelectedRouteTemplateId={setSelectedRouteTemplateId}
+            />
+            <DiagramChartSection
+              state={state}
+              dispatch={dispatch}
               isDarkTheme={isDarkTheme}
             />
-            <DiagramChartSection state={state} isDarkTheme={isDarkTheme} />
             <ProjectFileSection
               dispatch={dispatch}
               workspaceName={activeWorkspace.name}
             />
-            <UsageGuide />
           </main>
         </div>
         <SiteMetaFooter />

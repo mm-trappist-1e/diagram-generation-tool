@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1064" height="1064" viewBox="0 0 1064 1064" role="img" aria-label="Route setting icon">
+  <g transform="scale(1.0390625)">
+    <g fill="none" stroke="#000" stroke-width="50" stroke-linejoin="round" stroke-linecap="butt">
+      <path d="M110 864V573Q110 512 171 512H853Q914 512 914 451V201"/>
+    </g>
+    <g fill="#000" fill-rule="evenodd">
+      <path d="M110 819a95 95 0 1 1 0 190a95 95 0 0 1 0-190Zm0 50a45 45 0 1 0 0 90a45 45 0 0 0 0-90ZM913 15a95 95 0 1 1 0 190a95 95 0 0 1 0-190Zm0 50a45 45 0 1 0 0 90a45 45 0 0 0 0-90Z"/>
+    </g>
+  </g>
+</svg>

@@ -44,6 +44,19 @@ const asStringArray = (value: unknown) =>
     ? value.filter((entry): entry is string => typeof entry === "string")
     : [];
 
+const normalizePointArray = (value: unknown) =>
+  Array.isArray(value)
+    ? value.flatMap((entry) =>
+        isObject(entry) &&
+        typeof entry.x === "number" &&
+        Number.isFinite(entry.x) &&
+        typeof entry.y === "number" &&
+        Number.isFinite(entry.y)
+          ? [{ x: entry.x, y: entry.y }]
+          : []
+      )
+    : undefined;
+
 const normalizeSpeedClassIndex = (value: unknown) =>
   Math.max(0, Math.floor(asNumber(value, 0)));
 
@@ -106,12 +119,7 @@ const routeEdgeTypes: RouteEdgeType[] = [
   "service",
   "yard",
 ];
-const trainRunTypes: TrainRunType[] = [
-  "passenger",
-  "deadhead",
-  "freight",
-  "test",
-];
+const trainRunTypes: TrainRunType[] = ["passenger", "freight"];
 const stopStatuses: StopStatus[] = ["stop", "pass", "unset"];
 const lineStyles: LineStyle[] = [
   "auto",
@@ -278,6 +286,7 @@ const normalizeRouteEdge = (
     type: asRouteEdgeType(value.type),
     travelMinutes: Math.max(0, asNumber(value.travelMinutes, 0)),
     bidirectional: asBoolean(value.bidirectional, true),
+    manualWaypoints: normalizePointArray(value.manualWaypoints),
   };
 };
 
@@ -633,7 +642,7 @@ const normalizeTrainRun = (
     serviceEndTime: asString(value.serviceEndTime),
     deadheadStartTime: asString(value.deadheadStartTime),
     deadheadEndTime: asString(value.deadheadEndTime),
-    defaultStopMinutes: Math.max(0, asNumber(value.defaultStopMinutes, 5)),
+    defaultStopMinutes: 5,
     routeTemplateId: routeTemplates.some(
       (routeTemplate) => routeTemplate.id === value.routeTemplateId
     )

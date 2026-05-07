@@ -2,6 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .route-panel-accordion {
+    border-bottom: 1px solid rgb(226 232 240);
+  }
+
+  .route-panel-accordion:first-of-type {
+    border-top: 1px solid rgb(226 232 240);
+  }
+
+  .route-panel-accordion > summary {
+    display: flex;
+    min-height: 3rem;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.25rem;
+    color: rgb(51 65 85);
+    font-weight: 700;
+  }
+
+  .route-panel-accordion > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .route-panel-accordion-icon {
+    display: inline-flex;
+    width: 1rem;
+    flex: 0 0 auto;
+    justify-content: center;
+    color: rgb(37 99 235);
+    font-size: 1.15rem;
+    line-height: 1;
+    transition: transform 120ms ease;
+  }
+
+  .route-panel-accordion[open] > summary .route-panel-accordion-icon {
+    transform: rotate(90deg);
+  }
+
+  .route-panel-accordion-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0.25rem 1rem 1.75rem;
+  }
+
+  html.dark .route-panel-accordion,
+  html.dark .route-panel-accordion:first-of-type {
+    border-color: rgb(51 65 85);
+  }
+
+  html.dark .route-panel-accordion > summary {
+    color: rgb(241 245 249);
+  }
+
+  html.dark .route-panel-accordion-icon {
+    color: rgb(147 197 253);
+  }
+
+  .route-floating-panel-section {
+    border: 0;
+  }
+
+  .route-floating-panel-section[hidden] {
+    display: none;
+  }
+
+  .route-floating-panel-section > summary {
+    display: none;
+  }
+
+  .route-floating-panel-section .route-panel-accordion-body {
+    padding: 0;
+  }
+
+  .route-editor-tool-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  html.dark .route-editor-tool-icon {
+    filter: invert(1);
+  }
+
+  .route-editor-command-list > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .route-editor-command-list[open] > summary .route-panel-accordion-icon {
+    transform: rotate(90deg);
+  }
+}
+
 @layer base {
   html,
   body,
@@ -55,6 +151,11 @@
 @layer utilities {
   .route-map-viewport {
     overscroll-behavior: contain;
+    overflow-anchor: none;
+  }
+
+  .route-map-canvas {
+    overflow-anchor: none;
   }
 
   @media (pointer: coarse) {
@@ -167,6 +268,17 @@
     filter: none;
     fill: rgb(15 23 42);
     stroke: rgb(220 38 38);
+  }
+
+  html.dark .route-map-canvas .canvas-branch-break-label-bg {
+    filter: none;
+    fill: rgb(124 58 237);
+    stroke: rgb(196 181 253);
+  }
+
+  html.dark .route-map-canvas .canvas-branch-break-label-text {
+    filter: none;
+    fill: rgb(255 255 255);
   }
 
   @media (pointer: coarse) {

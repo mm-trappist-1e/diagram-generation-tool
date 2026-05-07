@@ -22,7 +22,7 @@ export type RouteReadDirection =
   | "bottomToTop"
   | "leftToRight"
   | "rightToLeft";
-export type TrainRunType = "passenger" | "deadhead" | "freight" | "test";
+export type TrainRunType = "passenger" | "freight";
 export type StopStatus = "stop" | "pass" | "unset";
 export type LineStyle =
   | "auto"
@@ -71,6 +71,7 @@ export type RouteEdge = {
   type: RouteEdgeType;
   travelMinutes: number;
   bidirectional: boolean;
+  manualWaypoints?: Array<{ x: number; y: number }>;
 };
 
 export type RouteTimeSectionPort = {
@@ -214,9 +215,7 @@ export const routeTimeSectionInternalDirectionLabels: Record<
 
 export const trainRunTypeLabels: Record<TrainRunType, string> = {
   passenger: "営業",
-  deadhead: "回送",
   freight: "貨物",
-  test: "試運転",
 };
 
 export const stopStatusLabels: Record<StopStatus, string> = {

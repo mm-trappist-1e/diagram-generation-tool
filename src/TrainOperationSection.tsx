@@ -5,14 +5,12 @@ import {
   Fragment,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { getThemeTrainColor } from "./lib/Color";
 import {
-  colorToHex,
   createId,
   getRouteNodeLabel,
-  hexToColor,
   isValidTimeString,
   LineStyle,
   lineStyleLabels,
@@ -25,7 +23,6 @@ import {
   stopStatusLabels,
   timeStringToDate,
   TrainRun,
-  TrainRouteKey,
   TrainRunRouteSection,
   trainRunTypeLabels,
   TrainRunType,
@@ -39,17 +36,9 @@ type Props = {
   dispatch: Dispatch<Actions>;
   selectedTrainRunId: string;
   setSelectedTrainRunId: (trainRunId: string) => void;
-  selectedRouteTemplateId: string;
-  setSelectedRouteTemplateId: (routeTemplateId: string) => void;
-  isDarkTheme: boolean;
 };
 
-const trainRunTypes: TrainRunType[] = [
-  "passenger",
-  "deadhead",
-  "freight",
-  "test",
-];
+const trainRunTypes: TrainRunType[] = ["passenger", "freight"];
 
 const stopStatuses: StopStatus[] = ["stop", "pass", "unset"];
 const lineStyles: LineStyle[] = [
@@ -61,8 +50,196 @@ const lineStyles: LineStyle[] = [
   "longDash",
 ];
 
+const CopyIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="8" y="8" width="11" height="11" rx="2" />
+    <path d="M5 16H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+  </svg>
+);
+
 const defaultStopMinutes = 5;
 const minutesPerDay = 24 * 60;
+
+type RGBDraft = { r: number; g: number; b: number };
+type RGBChannel = keyof RGBDraft;
+
+const clampColorChannel = (value: number) =>
+  Math.max(0, Math.min(255, Math.round(Number.isFinite(value) ? value : 0)));
+
+const getRGBDraftFromTrainColor = (color: TrainRun["color"]): RGBDraft => ({
+  r: clampColorChannel(color.r),
+  g: clampColorChannel(color.g),
+  b: clampColorChannel(color.b),
+});
+
+const getRGBDraftKey = (color: RGBDraft) =>
+  `${color.r}:${color.g}:${color.b}`;
+
+const getRGBDraftCssColor = (color: RGBDraft) =>
+  `rgb(${color.r}, ${color.g}, ${color.b})`;
+
+const TrainColorInput = ({
+  trainRunId,
+  color,
+  dispatch,
+}: {
+  trainRunId: string;
+  color: TrainRun["color"];
+  dispatch: Dispatch<Actions>;
+}) => {
+  const committedColor = getRGBDraftFromTrainColor(color);
+  const [isOpen, setIsOpen] = useState(false);
+  const [draftColor, setDraftColor] = useState<RGBDraft>(committedColor);
+  const draftColorRef = useRef<RGBDraft>(committedColor);
+  const committedColorKeyRef = useRef(getRGBDraftKey(committedColor));
+  const commitFrameRef = useRef<number | null>(null);
+  const dispatchRef = useRef(dispatch);
+  const trainRunIdRef = useRef(trainRunId);
+
+  const commitColor = (nextColor: RGBDraft) => {
+    const nextKey = getRGBDraftKey(nextColor);
+    if (nextKey === committedColorKeyRef.current) return;
+    committedColorKeyRef.current = nextKey;
+    dispatchRef.current({
+      type: "updateTrainRun",
+      payload: {
+        id: trainRunIdRef.current,
+        color: { ...nextColor, a: color.a ?? 1 },
+      },
+    });
+  };
+
+  const scheduleCommitColor = () => {
+    if (commitFrameRef.current !== null) return;
+    commitFrameRef.current = window.requestAnimationFrame(() => {
+      commitFrameRef.current = null;
+      commitColor(draftColorRef.current);
+    });
+  };
+
+  const updateDraftChannel = (channel: RGBChannel, value: number) => {
+    const nextColor = {
+      ...draftColorRef.current,
+      [channel]: clampColorChannel(value),
+    };
+    draftColorRef.current = nextColor;
+    setDraftColor(nextColor);
+    scheduleCommitColor();
+  };
+
+  useEffect(() => {
+    dispatchRef.current = dispatch;
+    trainRunIdRef.current = trainRunId;
+  }, [dispatch, trainRunId]);
+
+  useEffect(() => {
+    const nextColor = getRGBDraftFromTrainColor(color);
+    committedColorKeyRef.current = getRGBDraftKey(nextColor);
+    draftColorRef.current = nextColor;
+    setDraftColor(nextColor);
+  }, [color, trainRunId]);
+
+  useEffect(() => {
+    return () => {
+      if (commitFrameRef.current !== null) {
+        window.cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = null;
+      }
+      commitColor(draftColorRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-10 w-14 items-center justify-center rounded border border-gray-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-900"
+        aria-label="色を編集"
+      >
+        <span
+          className="h-8 w-10 rounded border border-gray-300 dark:border-slate-600"
+          style={{ backgroundColor: getRGBDraftCssColor(draftColor) }}
+          aria-hidden="true"
+        />
+      </button>
+      {isOpen ? (
+        <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded border border-gray-300 bg-white p-3 text-sm shadow-xl dark:border-slate-600 dark:bg-slate-900">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="font-bold text-gray-700 dark:text-slate-100">
+              RGB
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              閉じる
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {(["r", "g", "b"] as RGBChannel[]).map((channel) => (
+              <label
+                key={channel}
+                className="grid grid-cols-[1.5rem_minmax(0,1fr)_4rem] items-center gap-2 text-xs font-bold uppercase text-gray-600 dark:text-slate-200"
+              >
+                <span>{channel}</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={draftColor[channel]}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    updateDraftChannel(channel, Number(event.target.value))
+                  }
+                  className="min-w-0"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="255"
+                  value={draftColor[channel]}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    updateDraftChannel(channel, Number(event.target.value))
+                  }
+                  className="rounded border border-gray-300 bg-white p-1 text-right text-sm font-normal text-gray-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 const timeStringToMinutesOfDay = (value: string) => {
   if (!value || !isValidTimeString(value)) return null;
@@ -180,24 +357,6 @@ const canContinueFromPort = (
     routeNode.type !== "crossing" ||
     getPortSideAxis(from.side) === getPortSideAxis(to.side)
   );
-};
-
-const getRouteSectionKey = (section: TrainRunRouteSection) =>
-  `${section.routeTimeSectionId}:${section.reversed ? "1" : "0"}`;
-
-const getRouteSectionLabel = (
-  state: State,
-  routeSection: TrainRunRouteSection
-) => {
-  const section = getRouteSectionById(state, routeSection.routeTimeSectionId);
-  if (!section) return "未登録区間";
-  const startPort = getRouteSectionStartPort(section, routeSection.reversed);
-  const endPort = getRouteSectionEndPort(section, routeSection.reversed);
-  return `${getRouteNodeName(state.routeNodes, state, startPort.nodeId)} ${
-    startPort.index + 1
-  }番 → ${getRouteNodeName(state.routeNodes, state, endPort.nodeId)} ${
-    endPort.index + 1
-  }番 / ${section.travelMinutes}分`;
 };
 
 const getRouteNodeIdsFromSections = (
@@ -619,9 +778,6 @@ export const TrainOperationSection = ({
   dispatch,
   selectedTrainRunId,
   setSelectedTrainRunId,
-  selectedRouteTemplateId,
-  setSelectedRouteTemplateId,
-  isDarkTheme,
 }: Props) => {
   const visibleRouteNodes = useMemo(
     () =>
@@ -647,6 +803,8 @@ export const TrainOperationSection = ({
   const [draggingTrainRunId, setDraggingTrainRunId] = useState<string | null>(
     null
   );
+  const trainDetailPanelRef = useRef<HTMLElement | null>(null);
+  const [trainDetailPanelHeight, setTrainDetailPanelHeight] = useState(0);
   const [dragOverTrainRunId, setDragOverTrainRunId] = useState<string | null>(
     null
   );
@@ -669,6 +827,30 @@ export const TrainOperationSection = ({
   }, [selectedTrainRunId, setSelectedTrainRunId, state.trainRuns]);
 
   useEffect(() => {
+    const element = trainDetailPanelRef.current;
+    if (!element) return;
+
+    const updateHeight = () =>
+      setTrainDetailPanelHeight(
+        Math.ceil(element.getBoundingClientRect().height)
+      );
+    updateHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateHeight);
+      return () => window.removeEventListener("resize", updateHeight);
+    }
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [selectedTrainRunId, state.trainRuns.length]);
+
+  useEffect(() => {
     if (
       visibleRouteNodes.some((routeNode) => routeNode.id === newStopRouteNodeId)
     ) {
@@ -679,7 +861,8 @@ export const TrainOperationSection = ({
 
   const selectedTrainRun = useMemo<TrainRun | undefined>(
     () =>
-      state.trainRuns.find((trainRun) => trainRun.id === selectedTrainRunId),
+      state.trainRuns.find((trainRun) => trainRun.id === selectedTrainRunId) ??
+      state.trainRuns[0],
     [selectedTrainRunId, state.trainRuns]
   );
   const routeTimeSpeedClassCount = Math.max(
@@ -699,25 +882,6 @@ export const TrainOperationSection = ({
         : undefined,
     [selectedTrainRun, state.routeTemplates]
   );
-  const selectedRouteTemplate = useMemo<RouteTemplate | undefined>(
-    () =>
-      state.routeTemplates.find(
-        (routeTemplate) => routeTemplate.id === selectedRouteTemplateId
-      ),
-    [selectedRouteTemplateId, state.routeTemplates]
-  );
-
-  useEffect(() => {
-    if (
-      state.routeTemplates.some(
-        (routeTemplate) => routeTemplate.id === selectedRouteTemplateId
-      )
-    ) {
-      return;
-    }
-    setSelectedRouteTemplateId(state.routeTemplates[0]?.id ?? "");
-  }, [selectedRouteTemplateId, state.routeTemplates]);
-
   useEffect(() => {
     setRepeatSelectionStart(selectedTrainRun?.repeatRangeStartIndex ?? null);
     setRepeatSelectionEnd(selectedTrainRun?.repeatRangeEndIndex ?? null);
@@ -1226,164 +1390,9 @@ export const TrainOperationSection = ({
     cancelRepeatSelectionMode();
   };
 
-  const addRouteTemplate = (name: string) => {
-    const trimmedName = name.trim();
-    if (!trimmedName) return;
-    const existingRouteTemplate = state.routeTemplates.find(
-      (routeTemplate) => routeTemplate.name === trimmedName
-    );
-    if (existingRouteTemplate) {
-      setSelectedRouteTemplateId(existingRouteTemplate.id);
-      return;
-    }
-    const id = createId("rtpl");
-    dispatch({ type: "addRouteTemplate", payload: { id, name: trimmedName } });
-    setSelectedRouteTemplateId(id);
-  };
-
-  const renderRouteTemplateEditor = (
-    title: string,
-    key: TrainRouteKey,
-    routeTemplate: RouteTemplate
-  ) => {
-    const routeSections = routeTemplate[key];
-
-    return (
-      <section className="flex min-w-0 flex-col gap-2 rounded border border-gray-200 p-3">
-        <h4 className="text-sm font-bold text-gray-700">{title}</h4>
-        {routeSections.length > 0 ? (
-          <ol className="flex flex-col gap-2">
-            {routeSections.map((routeSection, index) => (
-              <li
-                key={`${routeTemplate.id}-${key}-${getRouteSectionKey(
-                  routeSection
-                )}-${index}`}
-                className="flex items-center gap-2 rounded bg-white p-2 text-sm"
-              >
-                <span className="w-7 text-right text-gray-500">
-                  {index + 1}
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  {getRouteSectionLabel(state, routeSection)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-gray-500">未設定</p>
-        )}
-      </section>
-    );
-  };
-
-  const renderRouteTemplateSection = () => (
-    <section className="flex flex-col gap-3 rounded-lg bg-white p-4">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[240px] flex-1">
-          <TextInput
-            placeholder="経路セット名を追加"
-            addButtonLabel="追加"
-            onEnterPress={addRouteTemplate}
-          />
-        </div>
-        {state.routeTemplates.length > 0 ? (
-          <label className="flex min-w-[240px] flex-col gap-1 text-sm">
-            表示する経路セット
-            <select
-              value={selectedRouteTemplateId}
-              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                setSelectedRouteTemplateId(event.target.value)
-              }
-              className="rounded border border-gray-300 p-2"
-            >
-              {state.routeTemplates.map((routeTemplate) => (
-                <option key={routeTemplate.id} value={routeTemplate.id}>
-                  {routeTemplate.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </div>
-
-      {selectedRouteTemplate ? (
-        <>
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-            <label className="flex flex-col gap-1 text-sm">
-              経路セット名
-              <input
-                type="text"
-                value={selectedRouteTemplate.name}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  dispatch({
-                    type: "updateRouteTemplate",
-                    payload: {
-                      id: selectedRouteTemplate.id,
-                      name: event.target.value,
-                    },
-                  })
-                }
-                className="rounded border border-gray-300 p-2"
-              />
-            </label>
-            <label className="flex items-center gap-2 self-end rounded border border-gray-200 px-3 py-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selectedRouteTemplate.deadheadEnabled}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  dispatch({
-                    type: "updateRouteTemplate",
-                    payload: {
-                      id: selectedRouteTemplate.id,
-                      deadheadEnabled: event.target.checked,
-                    },
-                  })
-                }
-              />
-              回送経路
-            </label>
-            <button
-              type="button"
-              onClick={() =>
-                dispatch({
-                  type: "removeRouteTemplate",
-                  payload: { id: selectedRouteTemplate.id },
-                })
-              }
-              className="self-end rounded bg-red-600 px-3 py-2 text-sm text-white"
-            >
-              経路セットを削除
-            </button>
-          </div>
-
-          <div className="grid gap-3 xl:grid-cols-2">
-            {renderRouteTemplateEditor(
-              "営業経路",
-              "serviceRouteSections",
-              selectedRouteTemplate
-            )}
-            {selectedRouteTemplate.deadheadEnabled ? (
-              renderRouteTemplateEditor(
-                "回送経路",
-                "deadheadRouteSections",
-                selectedRouteTemplate
-              )
-            ) : (
-              <section className="flex min-w-0 flex-col gap-2 rounded border border-gray-200 bg-slate-50 p-3">
-                <h4 className="text-sm font-bold text-gray-700">回送経路</h4>
-                <p className="text-sm text-gray-500">未使用</p>
-              </section>
-            )}
-          </div>
-        </>
-      ) : (
-        <p className="text-sm text-gray-500">経路セットを追加してください。</p>
-      )}
-    </section>
-  );
-
   const trainRunDropIndex = getTrainRunDropIndex();
   const stopDropIndex = getStopDropIndex();
+  const trainListMinHeight = 138;
 
   return (
     <section
@@ -1394,12 +1403,20 @@ export const TrainOperationSection = ({
         cancelRepeatSelectionMode();
       }}
     >
-      <h2 className="text-2xl">列車運用 / Stop時刻</h2>
-
-      {renderRouteTemplateSection()}
-
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <section className="flex min-w-0 flex-col gap-2 rounded-lg bg-white p-3 sm:p-4">
+      <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <section
+          className="flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg bg-white p-3 sm:p-4"
+          style={
+            trainDetailPanelHeight > 0
+              ? {
+                  maxHeight: `${Math.max(
+                    trainDetailPanelHeight,
+                    trainListMinHeight
+                  )}px`,
+                }
+              : undefined
+          }
+        >
           <h3 className="font-bold text-gray-700">列車一覧</h3>
           <TextInput
             placeholder="列車名を追加"
@@ -1408,9 +1425,9 @@ export const TrainOperationSection = ({
               dispatch({ type: "addTrainRun", payload: { name } })
             }
           />
-          <div className="flex flex-col gap-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
             {state.trainRuns.map((trainRun, index) => {
-              const isSelected = trainRun.id === selectedTrainRunId;
+              const isSelected = trainRun.id === selectedTrainRun?.id;
               const isDragging = trainRun.id === draggingTrainRunId;
 
               return (
@@ -1445,20 +1462,24 @@ export const TrainOperationSection = ({
                         {lineStyleLabels[trainRun.lineStyle]}
                       </div>
                     </button>
-                    <div className="flex shrink-0 flex-col gap-1">
+                    <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
                         onClick={() => duplicateTrainRun(trainRun.id)}
-                        className="rounded border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700"
+                        className="flex h-8 w-8 items-center justify-center rounded border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950"
+                        aria-label={`${trainRun.name}を複製`}
+                        title="複製"
                       >
-                        複製
+                        <CopyIcon />
                       </button>
                       <button
                         type="button"
                         onClick={() => removeTrainRun(trainRun.id)}
-                        className="rounded border border-red-200 bg-white px-2 py-1 text-xs text-red-700"
+                        className="flex h-8 w-8 items-center justify-center rounded border border-red-200 bg-white text-red-700 hover:bg-red-50 dark:border-red-500 dark:bg-slate-900 dark:text-red-200 dark:hover:bg-red-950"
+                        aria-label={`${trainRun.name}を削除`}
+                        title="削除"
                       >
-                        削除
+                        <TrashIcon />
                       </button>
                     </div>
                   </div>
@@ -1471,7 +1492,10 @@ export const TrainOperationSection = ({
           </div>
         </section>
 
-        <section className="flex min-w-0 flex-col gap-4 rounded-lg bg-white p-3 sm:p-4">
+        <section
+          ref={trainDetailPanelRef}
+          className="flex min-h-[138px] min-w-0 flex-col gap-4 self-start rounded-lg bg-white p-3 sm:p-4"
+        >
           {selectedTrainRun ? (
             <>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1516,21 +1540,10 @@ export const TrainOperationSection = ({
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
                   色
-                  <input
-                    type="color"
-                    value={colorToHex(
-                      getThemeTrainColor(selectedTrainRun.color, isDarkTheme)
-                    )}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                      dispatch({
-                        type: "updateTrainRun",
-                        payload: {
-                          id: selectedTrainRun.id,
-                          color: hexToColor(event.target.value),
-                        },
-                      })
-                    }
-                    className="h-10 rounded border border-gray-300 p-1"
+                  <TrainColorInput
+                    trainRunId={selectedTrainRun.id}
+                    color={selectedTrainRun.color}
+                    dispatch={dispatch}
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
@@ -1610,7 +1623,7 @@ export const TrainOperationSection = ({
                       B
                     </span>
                   </div>
-                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px]">
+                  <div className="grid gap-3">
                     <div className="grid gap-3 md:grid-cols-2">
                       <section className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3">
                         <h4 className="text-sm font-bold text-emerald-700">
@@ -1703,27 +1716,6 @@ export const TrainOperationSection = ({
                         </div>
                       </section>
                     </div>
-                    <label className="flex flex-col gap-1 text-sm">
-                      標準停車分
-                      <input
-                        type="number"
-                        min="0"
-                        value={selectedTrainRun.defaultStopMinutes}
-                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                          dispatch({
-                            type: "updateTrainRun",
-                            payload: {
-                              id: selectedTrainRun.id,
-                              defaultStopMinutes: Math.max(
-                                0,
-                                Number(event.target.value)
-                              ),
-                            },
-                          })
-                        }
-                        className="rounded border border-gray-300 bg-white p-2"
-                      />
-                    </label>
                   </div>
                 </div>
 

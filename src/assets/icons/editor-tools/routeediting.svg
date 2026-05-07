@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1064 1064" width="1064" height="1064">
+  <defs>
+    <mask id="cutout-holes" maskUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="1064" height="1064" fill="white"/>
+      <circle cx="115" cy="950" r="48" fill="black"/>
+      <circle cx="949" cy="114" r="48" fill="black"/>
+    </mask>
+  </defs>
+
+  <g fill="none" stroke="#000000" stroke-width="52" stroke-linecap="butt" stroke-linejoin="round" mask="url(#cutout-holes)">
+    <!-- solid route: bottom-left circle to top-right circle -->
+    <path d="M115 950 V187 Q115 115 187 115 H949"/>
+    <!-- lower/side dashed route -->
+    <path d="M115 950 H349"/>
+    <path d="M423 950 H583"/>
+    <path d="M657 950 H817"/>
+    <path d="M949 114 V274"/>
+    <path d="M949 348 V508"/>
+    <path d="M949 582 V742"/>
+    <path d="M949 816 V897 A52 52 0 0 1 897 949"/>
+  </g>
+
+  <g fill="#000000" mask="url(#cutout-holes)">
+    <circle cx="115" cy="950" r="99"/>
+    <circle cx="949" cy="114" r="99"/>
+  </g>
+</svg>

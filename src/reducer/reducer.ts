@@ -110,6 +110,7 @@ type CoreAction =
         edgeType?: RouteEdgeType;
         travelMinutes?: number;
         bidirectional?: boolean;
+        manualWaypoints?: Array<{ x: number; y: number }>;
       };
     }
   | {
@@ -119,6 +120,7 @@ type CoreAction =
         edgeType?: RouteEdgeType;
         travelMinutes?: number;
         bidirectional?: boolean;
+        manualWaypoints?: Array<{ x: number; y: number }> | null;
       };
     }
   | { type: "reverseRouteEdge"; payload: { id: string } }
@@ -1762,12 +1764,22 @@ export const reducer = (prevState: State, action: Actions): State => {
     }
 
     case "updateStation": {
+      const station = prevState.stations.find(
+        (candidate) => candidate.id === action.payload.id
+      );
+      const previousName = station?.name ?? "";
       return {
         ...prevState,
         stations: prevState.stations.map((station) =>
           station.id === action.payload.id
             ? { ...station, name: action.payload.name }
             : station
+        ),
+        routeNodes: prevState.routeNodes.map((routeNode) =>
+          routeNode.stationId === action.payload.id &&
+          (!routeNode.label || routeNode.label === previousName)
+            ? { ...routeNode, label: action.payload.name }
+            : routeNode
         ),
       };
     }
@@ -1844,6 +1856,23 @@ export const reducer = (prevState: State, action: Actions): State => {
         previousRouteNode.type === "connection" &&
         action.payload.connectionType !== undefined &&
         action.payload.connectionType !== previousRouteNode.connectionType;
+      const nextX = action.payload.x ?? previousRouteNode.x;
+      const nextY = action.payload.y ?? previousRouteNode.y;
+      const nodeMoved = nextX !== previousRouteNode.x || nextY !== previousRouteNode.y;
+      const stationChanged =
+        action.payload.stationId !== undefined &&
+        action.payload.stationId !== previousRouteNode.stationId;
+      const nextStationName = stationChanged
+        ? prevState.stations.find(
+            (station) => station.id === action.payload.stationId
+          )?.name ?? ""
+        : "";
+      const clearMovedNodeManualWaypoints = (routeEdge: RouteEdge): RouteEdge =>
+        nodeMoved &&
+        (routeEdge.fromNodeId === previousRouteNode.id ||
+          routeEdge.toNodeId === previousRouteNode.id)
+          ? { ...routeEdge, manualWaypoints: undefined }
+          : routeEdge;
       const routeNodes = prevState.routeNodes.map((routeNode) => {
         if (routeNode.id !== action.payload.id) return routeNode;
         const platformCount =
@@ -1859,7 +1888,9 @@ export const reducer = (prevState: State, action: Actions): State => {
           stationId: action.payload.stationId ?? routeNode.stationId,
           label:
             action.payload.label === undefined
-              ? routeNode.label
+              ? stationChanged
+                ? nextStationName
+                : routeNode.label
               : action.payload.label,
           type: action.payload.nodeType ?? routeNode.type,
           x: action.payload.x ?? routeNode.x,
@@ -1903,30 +1934,35 @@ export const reducer = (prevState: State, action: Actions): State => {
         return {
           ...prevState,
           routeNodes,
+          routeEdges: nodeMoved
+            ? prevState.routeEdges.map(clearMovedNodeManualWaypoints)
+            : prevState.routeEdges,
         };
       }
 
-      const routeEdges = prevState.routeEdges.map((routeEdge) => ({
-        ...routeEdge,
-        fromPortIndex:
-          routeEdge.fromNodeId === previousRouteNode.id
-            ? remapConnectionPortIndexForType(
-                previousRouteNode,
-                nextConnectionType,
-                routeEdge.fromPortSide,
-                routeEdge.fromPortIndex
-              )
-            : routeEdge.fromPortIndex,
-        toPortIndex:
-          routeEdge.toNodeId === previousRouteNode.id
-            ? remapConnectionPortIndexForType(
-                previousRouteNode,
-                nextConnectionType,
-                routeEdge.toPortSide,
-                routeEdge.toPortIndex
-              )
-            : routeEdge.toPortIndex,
-      }));
+      const routeEdges = prevState.routeEdges.map((routeEdge) =>
+        clearMovedNodeManualWaypoints({
+          ...routeEdge,
+          fromPortIndex:
+            routeEdge.fromNodeId === previousRouteNode.id
+              ? remapConnectionPortIndexForType(
+                  previousRouteNode,
+                  nextConnectionType,
+                  routeEdge.fromPortSide,
+                  routeEdge.fromPortIndex
+                )
+              : routeEdge.fromPortIndex,
+          toPortIndex:
+            routeEdge.toNodeId === previousRouteNode.id
+              ? remapConnectionPortIndexForType(
+                  previousRouteNode,
+                  nextConnectionType,
+                  routeEdge.toPortSide,
+                  routeEdge.toPortIndex
+                )
+              : routeEdge.toPortIndex,
+        })
+      );
       const routeTimeSections = prevState.routeTimeSections.map((section) => ({
         ...section,
         startPortIndex:
@@ -2165,6 +2201,10 @@ export const reducer = (prevState: State, action: Actions): State => {
         type: action.payload.edgeType ?? "main",
         travelMinutes: Math.max(0, action.payload.travelMinutes ?? 0),
         bidirectional: action.payload.bidirectional ?? true,
+        manualWaypoints: action.payload.manualWaypoints?.map((point) => ({
+          x: point.x,
+          y: point.y,
+        })),
       };
 
       return {
@@ -2230,6 +2270,7 @@ export const reducer = (prevState: State, action: Actions): State => {
         toPortSide: entryPort.side,
         toPortIndex: entryPort.index,
         travelMinutes: firstTravelMinutes,
+        manualWaypoints: undefined,
       };
       const secondRouteEdge: RouteEdge = {
         ...routeEdge,
@@ -2238,6 +2279,7 @@ export const reducer = (prevState: State, action: Actions): State => {
         fromPortSide: exitPort.side,
         fromPortIndex: exitPort.index,
         travelMinutes: secondTravelMinutes,
+        manualWaypoints: undefined,
       };
       const routeEdges = prevState.routeEdges.flatMap((edge) =>
         edge.id === routeEdge.id ? [firstRouteEdge, secondRouteEdge] : [edge]
@@ -2349,6 +2391,7 @@ export const reducer = (prevState: State, action: Actions): State => {
             toPortSide: entryPort.side,
             toPortIndex: entryPort.index,
             travelMinutes: firstTravelMinutes,
+            manualWaypoints: undefined,
           } satisfies RouteEdge,
           secondRouteEdge: {
             ...routeEdge,
@@ -2357,6 +2400,7 @@ export const reducer = (prevState: State, action: Actions): State => {
             fromPortSide: exitPort.side,
             fromPortIndex: exitPort.index,
             travelMinutes: secondTravelMinutes,
+            manualWaypoints: undefined,
           } satisfies RouteEdge,
         };
       });
@@ -2419,6 +2463,15 @@ export const reducer = (prevState: State, action: Actions): State => {
                   action.payload.travelMinutes ?? routeEdge.travelMinutes,
                 bidirectional:
                   action.payload.bidirectional ?? routeEdge.bidirectional,
+                manualWaypoints: Object.prototype.hasOwnProperty.call(
+                  action.payload,
+                  "manualWaypoints"
+                )
+                  ? action.payload.manualWaypoints?.map((point) => ({
+                      x: point.x,
+                      y: point.y,
+                    }))
+                  : routeEdge.manualWaypoints,
               }
             : routeEdge
         ),
@@ -2438,6 +2491,9 @@ export const reducer = (prevState: State, action: Actions): State => {
                 fromPortIndex: routeEdge.toPortIndex,
                 toPortSide: routeEdge.fromPortSide,
                 toPortIndex: routeEdge.fromPortIndex,
+                manualWaypoints: routeEdge.manualWaypoints
+                  ? [...routeEdge.manualWaypoints].reverse()
+                  : undefined,
               }
             : routeEdge
         ),
@@ -3074,91 +3130,98 @@ export const reducer = (prevState: State, action: Actions): State => {
     }
 
     case "updateTrainRun": {
+      const shouldRecalculateAutoStops =
+        action.payload.serviceStartTime !== undefined ||
+        action.payload.serviceEndTime !== undefined ||
+        action.payload.deadheadStartTime !== undefined ||
+        action.payload.deadheadEndTime !== undefined ||
+        action.payload.defaultStopMinutes !== undefined ||
+        action.payload.routeTemplateId !== undefined ||
+        action.payload.speedClassIndex !== undefined ||
+        action.payload.serviceRouteNodeIds !== undefined ||
+        action.payload.deadheadRouteNodeIds !== undefined ||
+        action.payload.serviceRouteSections !== undefined ||
+        action.payload.deadheadRouteSections !== undefined ||
+        action.payload.stopSettings !== undefined ||
+        action.payload.deadheadStopSettings !== undefined;
+
       return {
         ...prevState,
         trainRuns: updateTrainRun(
           prevState.trainRuns,
           action.payload.id,
-          (run) =>
-            withAutoStops(
-              {
-                ...run,
-                name: action.payload.name ?? run.name,
-                runType: action.payload.runType ?? run.runType,
-                lineStyle: action.payload.lineStyle ?? run.lineStyle,
-                color: action.payload.color ?? run.color,
-                operationGroup:
-                  action.payload.operationGroup === undefined
-                    ? run.operationGroup
-                    : action.payload.operationGroup,
-                repeat: action.payload.repeat ?? run.repeat,
-                serviceStartTime:
-                  action.payload.serviceStartTime ?? run.serviceStartTime,
-                serviceEndTime:
-                  action.payload.serviceEndTime ?? run.serviceEndTime,
-                deadheadStartTime:
-                  action.payload.deadheadStartTime ?? run.deadheadStartTime,
-                deadheadEndTime:
-                  action.payload.deadheadEndTime ?? run.deadheadEndTime,
-                defaultStopMinutes:
-                  action.payload.defaultStopMinutes === undefined
-                    ? run.defaultStopMinutes
-                    : Math.max(
-                        0,
-                        Math.floor(action.payload.defaultStopMinutes)
-                      ),
-                routeTemplateId:
-                  action.payload.routeTemplateId ?? run.routeTemplateId,
-                speedClassIndex:
-                  action.payload.speedClassIndex === undefined
-                    ? run.speedClassIndex ?? 0
-                    : getNormalizedSpeedClassIndex(
-                        action.payload.speedClassIndex
-                      ),
-                serviceRouteNodeIds:
-                  action.payload.serviceRouteNodeIds ?? run.serviceRouteNodeIds,
-                deadheadRouteNodeIds:
-                  action.payload.deadheadRouteNodeIds ??
-                  run.deadheadRouteNodeIds,
-                serviceRouteSections:
-                  action.payload.serviceRouteSections === undefined
-                    ? run.serviceRouteSections
-                    : normalizeRouteSections(
-                        action.payload.serviceRouteSections
-                      ),
-                deadheadRouteSections:
-                  action.payload.deadheadRouteSections === undefined
-                    ? run.deadheadRouteSections
-                    : normalizeRouteSections(
-                        action.payload.deadheadRouteSections
-                      ),
-                repeatRangeStartIndex:
-                  action.payload.repeatRangeStartIndex === undefined
-                    ? run.repeatRangeStartIndex
-                    : action.payload.repeatRangeStartIndex,
-                repeatRangeEndIndex:
-                  action.payload.repeatRangeEndIndex === undefined
-                    ? run.repeatRangeEndIndex
-                    : action.payload.repeatRangeEndIndex,
-                repeatRangeCount:
-                  action.payload.repeatRangeCount === undefined
-                    ? run.repeatRangeCount
-                    : Math.max(1, Math.floor(action.payload.repeatRangeCount)),
-                stopSettings:
-                  action.payload.stopSettings === undefined
-                    ? run.stopSettings
-                    : normalizeStopSettings(action.payload.stopSettings),
-                deadheadStopSettings:
-                  action.payload.deadheadStopSettings === undefined
-                    ? run.deadheadStopSettings ?? []
-                    : normalizeStopSettings(
-                        action.payload.deadheadStopSettings
-                      ),
-              },
-              prevState.routeTimeSections,
-              prevState.routeNodes,
-              prevState.routeTemplates
-            )
+          (run) => {
+            const nextRun = {
+              ...run,
+              name: action.payload.name ?? run.name,
+              runType: action.payload.runType ?? run.runType,
+              lineStyle: action.payload.lineStyle ?? run.lineStyle,
+              color: action.payload.color ?? run.color,
+              operationGroup:
+                action.payload.operationGroup === undefined
+                  ? run.operationGroup
+                  : action.payload.operationGroup,
+              repeat: action.payload.repeat ?? run.repeat,
+              serviceStartTime:
+                action.payload.serviceStartTime ?? run.serviceStartTime,
+              serviceEndTime:
+                action.payload.serviceEndTime ?? run.serviceEndTime,
+              deadheadStartTime:
+                action.payload.deadheadStartTime ?? run.deadheadStartTime,
+              deadheadEndTime:
+                action.payload.deadheadEndTime ?? run.deadheadEndTime,
+              defaultStopMinutes: 5,
+              routeTemplateId:
+                action.payload.routeTemplateId ?? run.routeTemplateId,
+              speedClassIndex:
+                action.payload.speedClassIndex === undefined
+                  ? run.speedClassIndex ?? 0
+                  : getNormalizedSpeedClassIndex(action.payload.speedClassIndex),
+              serviceRouteNodeIds:
+                action.payload.serviceRouteNodeIds ?? run.serviceRouteNodeIds,
+              deadheadRouteNodeIds:
+                action.payload.deadheadRouteNodeIds ?? run.deadheadRouteNodeIds,
+              serviceRouteSections:
+                action.payload.serviceRouteSections === undefined
+                  ? run.serviceRouteSections
+                  : normalizeRouteSections(action.payload.serviceRouteSections),
+              deadheadRouteSections:
+                action.payload.deadheadRouteSections === undefined
+                  ? run.deadheadRouteSections
+                  : normalizeRouteSections(
+                      action.payload.deadheadRouteSections
+                    ),
+              repeatRangeStartIndex:
+                action.payload.repeatRangeStartIndex === undefined
+                  ? run.repeatRangeStartIndex
+                  : action.payload.repeatRangeStartIndex,
+              repeatRangeEndIndex:
+                action.payload.repeatRangeEndIndex === undefined
+                  ? run.repeatRangeEndIndex
+                  : action.payload.repeatRangeEndIndex,
+              repeatRangeCount:
+                action.payload.repeatRangeCount === undefined
+                  ? run.repeatRangeCount
+                  : Math.max(1, Math.floor(action.payload.repeatRangeCount)),
+              stopSettings:
+                action.payload.stopSettings === undefined
+                  ? run.stopSettings
+                  : normalizeStopSettings(action.payload.stopSettings),
+              deadheadStopSettings:
+                action.payload.deadheadStopSettings === undefined
+                  ? run.deadheadStopSettings ?? []
+                  : normalizeStopSettings(action.payload.deadheadStopSettings),
+            };
+
+            return shouldRecalculateAutoStops
+              ? withAutoStops(
+                  nextRun,
+                  prevState.routeTimeSections,
+                  prevState.routeNodes,
+                  prevState.routeTemplates
+                )
+              : nextRun;
+          }
         ),
       };
     }

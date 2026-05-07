@@ -1,4 +1,4 @@
-import { ChangeEvent, Dispatch, DragEvent, MouseEvent } from "react";
+import { ChangeEvent, Dispatch, DragEvent, MouseEvent, useState } from "react";
 import { stateToCsv } from "./lib/export";
 import { jSONToState } from "./lib/StateValidator";
 import { Actions, State } from "./reducer/reducer";
@@ -45,11 +45,29 @@ type ExportControlsProps = {
   className?: string;
 };
 
+const DownloadIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="h-5 w-5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3v11" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M5 21h14" />
+  </svg>
+);
+
 export const ExportControls = ({
   state,
   fileNamePrefix,
   className = "",
 }: ExportControlsProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const downloadJson = (event: MouseEvent<HTMLButtonElement>) => {
     downloadText(
       event,
@@ -57,6 +75,7 @@ export const ExportControls = ({
       "text/json",
       createFileName("json", fileNamePrefix)
     );
+    setIsOpen(false);
   };
 
   const downloadCsv = (event: MouseEvent<HTMLButtonElement>) => {
@@ -66,24 +85,52 @@ export const ExportControls = ({
       "text/csv",
       createFileName("csv", fileNamePrefix)
     );
+    setIsOpen(false);
   };
 
   return (
-    <div className={`flex flex-wrap justify-end gap-2 ${className}`}>
+    <div
+      className={`relative flex justify-end ${className}`}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsOpen(false);
+        }
+      }}
+    >
       <button
         type="button"
-        onClick={downloadJson}
-        className="flex-1 rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 sm:flex-none"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label="ダウンロード"
+        title="ダウンロード"
       >
-        Download JSON
+        <DownloadIcon />
       </button>
-      <button
-        type="button"
-        onClick={downloadCsv}
-        className="flex-1 rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:flex-none"
-      >
-        Export CSV
-      </button>
+      {isOpen ? (
+        <div
+          className="absolute right-0 top-full z-40 mt-1 min-w-40 overflow-hidden rounded border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          role="menu"
+        >
+          <button
+            type="button"
+            onClick={downloadJson}
+            className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 dark:text-slate-100 dark:hover:bg-slate-800"
+            role="menuitem"
+          >
+            JSON
+          </button>
+          <button
+            type="button"
+            onClick={downloadCsv}
+            className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 dark:text-slate-100 dark:hover:bg-slate-800"
+            role="menuitem"
+          >
+            CSV
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };

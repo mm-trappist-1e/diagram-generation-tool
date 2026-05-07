@@ -14,7 +14,7 @@ import {
 } from "chart.js";
 import { ja } from "date-fns/locale";
 import "chartjs-adapter-date-fns";
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, Dispatch, useMemo, useState } from "react";
 import { Scatter } from "react-chartjs-2";
 import {
   colorToBackgroundRGBA,
@@ -26,11 +26,12 @@ import {
   getRouteNodeLabel,
   isValidTimeString,
   LineStyle,
+  routeReadDirectionLabels,
   routeNodeTypeLabels,
   timeStringToDate,
   TrainRun,
 } from "./lib/domain";
-import { State } from "./reducer/reducer";
+import { Actions, State } from "./reducer/reducer";
 
 ChartJS.register(
   TimeScale,
@@ -54,9 +55,7 @@ const lineStyleBorderDash = (
       ? (
           {
             passenger: "solid",
-            deadhead: "dashed",
             freight: "dotted",
-            test: "dashDot",
           } satisfies Record<TrainRun["runType"], Exclude<LineStyle, "auto">>
         )[runType]
       : lineStyle;
@@ -166,9 +165,13 @@ const trainRunsToChartDatasets = (
     };
   });
 
-type Props = { state: State; isDarkTheme: boolean };
+type Props = { state: State; dispatch: Dispatch<Actions>; isDarkTheme: boolean };
 
-export const DiagramChartSection = ({ state, isDarkTheme }: Props) => {
+export const DiagramChartSection = ({
+  state,
+  dispatch,
+  isDarkTheme,
+}: Props) => {
   const [height, setHeight] = useState<number>(60);
   const chartBackgroundColor = isDarkTheme ? "#020617" : "#ffffff";
   const chartTextColor = isDarkTheme ? "#f8fafc" : "#334155";
@@ -257,8 +260,36 @@ export const DiagramChartSection = ({ state, isDarkTheme }: Props) => {
   };
 
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-2xl">ダイヤグラム</h2>
+    <section className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl">ダイヤグラム</h2>
+        <label
+          htmlFor="diagram-read-direction"
+          className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-100"
+        >
+          <span className="shrink-0">読取方向</span>
+          <select
+            id="diagram-read-direction"
+            value={state.routeReadDirection}
+            onChange={(event) =>
+              dispatch({
+                type: "updateRouteReadDirection",
+                payload: {
+                  routeReadDirection: event.target
+                    .value as State["routeReadDirection"],
+                },
+              })
+            }
+            className="rounded border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          >
+            {Object.entries(routeReadDirectionLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center">
         <p className="shrink-0">グラフの高さ:</p>
         <input
@@ -272,9 +303,9 @@ export const DiagramChartSection = ({ state, isDarkTheme }: Props) => {
           className="grow"
         />
       </div>
-      <div className="overflow-x-auto">
+      <div className="min-w-0 overflow-hidden">
         <div
-          className="box-border min-w-[680px] pr-6"
+          className="box-border w-full pr-4 sm:pr-6"
           style={{ height: `${height}vh` }}
         >
           <Scatter

@@ -4,6 +4,7 @@ import {
   MouseEvent,
   SyntheticEvent,
   TouchEvent as ReactTouchEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -5835,6 +5836,7 @@ export const RouteNetworkEditor = ({
   } | null>(null);
   const dragStateTouchRef = useRef<DragState | null>(null);
   const isTouchDraggingRef = useRef(false);
+  const selectionStateRef = useRef<SelectionState | null>(null);
   const canvasViewportStyleRef = useRef<{
     overflow: string;
     touchAction: string;
@@ -7150,6 +7152,25 @@ export const RouteNetworkEditor = ({
   const getSvgPoint = (event: MouseEvent<Element>) =>
     getSvgPointFromClient(event.clientX, event.clientY);
 
+  const startSelection = (point: Point) => {
+    const nextSelection = { start: point, current: point };
+    selectionStateRef.current = nextSelection;
+    setSelectionState(nextSelection);
+  };
+
+  const updateSelectionCurrent = (point: Point) => {
+    const currentSelection = selectionStateRef.current;
+    if (!currentSelection) return;
+    const nextSelection = { ...currentSelection, current: point };
+    selectionStateRef.current = nextSelection;
+    setSelectionState(nextSelection);
+  };
+
+  const clearSelection = () => {
+    selectionStateRef.current = null;
+    setSelectionState(null);
+  };
+
   const clonePoints = (points: Point[]) =>
     points.map((point) => ({ ...point }));
 
@@ -7733,7 +7754,7 @@ export const RouteNetworkEditor = ({
       return point.x >= projected.x ? 0 : 1;
     }
     if (normalizedRotation === 180) {
-      return point.y >= projected.y ? 0 : 1;
+      return point.y >= projected.y ? 1 : 0;
     }
     return point.y >= projected.y ? 0 : 1;
   };
@@ -8067,7 +8088,7 @@ export const RouteNetworkEditor = ({
           currentPoint: point,
         });
         setDragState(null);
-        setSelectionState(null);
+        clearSelection();
         setConnectState(null);
       } else {
         addConnectionNodeAt(getSvgPoint(event));
@@ -8847,9 +8868,9 @@ export const RouteNetworkEditor = ({
         });
       });
     }
-    if (selectionState) {
+    if (selectionStateRef.current) {
       movedRef.current = true;
-      setSelectionState({ ...selectionState, current: point });
+      updateSelectionCurrent(point);
     }
     if (connectState) {
       setConnectState({ ...connectState, x: point.x, y: point.y });
@@ -8929,7 +8950,7 @@ export const RouteNetworkEditor = ({
       scrollLeft: viewport.scrollLeft,
       scrollTop: viewport.scrollTop,
     });
-    setSelectionState(null);
+    clearSelection();
     setDragState(null);
     setConnectState(null);
   };
@@ -8986,10 +9007,10 @@ export const RouteNetworkEditor = ({
         });
       });
     }
-    if (selectionState) {
+    if (selectionStateRef.current) {
       event.preventDefault();
       movedRef.current = true;
-      setSelectionState({ ...selectionState, current: point });
+      updateSelectionCurrent(point);
     }
     if (connectState) {
       event.preventDefault();
@@ -9005,7 +9026,7 @@ export const RouteNetworkEditor = ({
     unlockPageScroll();
     setDragState(null);
     setCanvasPanState(null);
-    setSelectionState(null);
+    clearSelection();
     setBranchInsertDragState(null);
     setConnectState(null);
   };
@@ -9035,7 +9056,7 @@ export const RouteNetworkEditor = ({
         scrollLeft: viewport.scrollLeft,
         scrollTop: viewport.scrollTop,
       });
-      setSelectionState(null);
+      clearSelection();
       setSelectedNodeIds(new Set());
       setSelectedNodeId("");
       setSelectedRouteEdgeIds(new Set());
@@ -9052,43 +9073,17 @@ export const RouteNetworkEditor = ({
     if (!event.shiftKey || event.button !== 0) return;
     const point = getSvgPoint(event);
     movedRef.current = false;
-    setSelectionState({ start: point, current: point });
+    startSelection(point);
     setDragState(null);
     setConnectState(null);
   };
 
-  const onSvgMouseUp = (event: MouseEvent<SVGSVGElement>) => {
-    if (canvasPanState) {
-      setCanvasPanState(null);
-      return;
-    }
-
-    if (branchInsertDragState) {
-      const point = getSvgPoint(event);
-      const primaryRouteEdgeId = branchInsertDragState.routeEdgeIds[0];
-      const geometry = primaryRouteEdgeId
-        ? routeEdgeGeometryById.get(primaryRouteEdgeId)
-        : null;
-      if (geometry) {
-        const plan = getConnectionInsertPlan(
-          branchInsertDragState.placementPoint,
-          point,
-          geometry,
-          branchInsertDragState.routeEdgeIds
-        );
-        if (plan) commitConnectionInsertPlan(plan);
-      }
-      setBranchInsertDragState(null);
-      setDragState(null);
-      setSelectionState(null);
-      setConnectState(null);
-      return;
-    }
-    if (selectionState) {
+  const applySelection = useCallback(
+    (selection: SelectionState) => {
       movedRef.current = true;
       const selectionRect = getRectFromPoints(
-        selectionState.start,
-        selectionState.current
+        selection.start,
+        selection.current
       );
       const nextSelectedNodeIds = new Set(
         state.routeNodes
@@ -9130,12 +9125,91 @@ export const RouteNetworkEditor = ({
       setSelectedEdgeId("");
       setSelectedBranchEdgeIds([]);
       setSelectedRouteTimeSectionId("");
-      setSelectionState(null);
+      clearSelection();
+    },
+    [
+      routeEdgeGeometry,
+      routeTimeLabelPlacementById,
+      routeTimeSectionsForSelectedSpeed,
+      state.routeNodes,
+    ]
+  );
+
+  const onSvgMouseUp = (event: MouseEvent<SVGSVGElement>) => {
+    if (canvasPanState) {
+      setCanvasPanState(null);
+      return;
+    }
+
+    if (branchInsertDragState) {
+      const point = getSvgPoint(event);
+      const primaryRouteEdgeId = branchInsertDragState.routeEdgeIds[0];
+      const geometry = primaryRouteEdgeId
+        ? routeEdgeGeometryById.get(primaryRouteEdgeId)
+        : null;
+      if (geometry) {
+        const plan = getConnectionInsertPlan(
+          branchInsertDragState.placementPoint,
+          point,
+          geometry,
+          branchInsertDragState.routeEdgeIds
+        );
+        if (plan) commitConnectionInsertPlan(plan);
+      }
+      setBranchInsertDragState(null);
+      setDragState(null);
+      clearSelection();
+      setConnectState(null);
+      return;
+    }
+    const activeSelection = selectionStateRef.current;
+    if (activeSelection) {
+      applySelection(activeSelection);
     }
     setDragState(null);
     setCanvasPanState(null);
     setConnectState(null);
   };
+
+  useEffect(() => {
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      if (!selectionStateRef.current) return;
+      const svg = svgRef.current;
+      if (
+        svg &&
+        event.target instanceof Node &&
+        svg.contains(event.target)
+      ) {
+        return;
+      }
+      movedRef.current = true;
+      updateSelectionCurrent(
+        getSvgPointFromClient(event.clientX, event.clientY)
+      );
+    };
+
+    const finishActiveSelection = () => {
+      const activeSelection = selectionStateRef.current;
+      if (!activeSelection) return;
+      applySelection(activeSelection);
+      setDragState(null);
+      setCanvasPanState(null);
+      setConnectState(null);
+    };
+
+    const handleMouseUp = () => {
+      finishActiveSelection();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, true);
+    window.addEventListener("mouseup", handleMouseUp, true);
+    window.addEventListener("blur", finishActiveSelection);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove, true);
+      window.removeEventListener("mouseup", handleMouseUp, true);
+      window.removeEventListener("blur", finishActiveSelection);
+    };
+  }, [applySelection]);
 
   useEffect(() => {
     const viewport = canvasViewportRef.current;
@@ -9407,7 +9481,7 @@ export const RouteNetworkEditor = ({
     const point = getSvgPoint(event);
     movedRef.current = false;
     if (event.shiftKey) {
-      setSelectionState({ start: point, current: point });
+      startSelection(point);
       setDragState(null);
       return;
     }

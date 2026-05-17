@@ -520,6 +520,23 @@ const isSameRouteLocation = (a: AutoRoutePoint, b: AutoRoutePoint) => {
   return a.portIndex === b.portIndex;
 };
 
+const getDirectionalRouteTimeInternalDirection = (
+  internalDirection: RouteTimeSectionInternalDirection | undefined,
+  reversed: boolean
+): RouteTimeSectionInternalDirection => {
+  const normalizedDirection = internalDirection ?? "forward";
+  if (!reversed) return normalizedDirection;
+  switch (normalizedDirection) {
+    case "forward":
+      return "reverse";
+    case "reverse":
+      return "forward";
+    case "bidirectional":
+    default:
+      return "bidirectional";
+  }
+};
+
 const buildRoutePointsFromSections = (
   routeSections: TrainRunRouteSection[],
   routeTimeSections: RouteTimeSection[],
@@ -540,7 +557,10 @@ const buildRoutePointsFromSections = (
       : section.routePorts;
     const directionalSection = {
       ...section,
-      internalDirection: section.internalDirection ?? "forward",
+      internalDirection: getDirectionalRouteTimeInternalDirection(
+        section.internalDirection,
+        routeSection.reversed
+      ),
       routePorts,
       segmentMinutes: routeSection.reversed
         ? [...section.segmentMinutes].reverse()

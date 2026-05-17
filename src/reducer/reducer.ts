@@ -659,6 +659,32 @@ const getRouteSegmentFromPoint = (
   return index < 0 ? [] : normalizeRouteSegmentStart(points.slice(index));
 };
 
+const getRouteSegmentsFromPoint = (
+  points: AutoRoutePoint[],
+  routePoint: AutoRoutePoint
+) =>
+  points.flatMap((point, index) =>
+    isSameRouteLocation(point, routePoint)
+      ? [normalizeRouteSegmentStart(points.slice(index))]
+      : []
+  );
+
+const getRouteSegmentTravelMinutes = (points: AutoRoutePoint[]) =>
+  points
+    .slice(1)
+    .reduce(
+      (total, point) => total + (point.travelMinutesFromPrevious ?? 0),
+      0
+    );
+
+const getShortestRouteSegmentFromPoint = (
+  points: AutoRoutePoint[],
+  routePoint: AutoRoutePoint
+) =>
+  getRouteSegmentsFromPoint(points, routePoint).sort(
+    (a, b) => getRouteSegmentTravelMinutes(a) - getRouteSegmentTravelMinutes(b)
+  )[0] ?? [];
+
 const getPrimaryStopTime = (stop: Stop) =>
   stop.arrivalTime || stop.departureTime;
 
@@ -964,7 +990,10 @@ const buildAutoStops = (
       deadheadRoutePoints.length > 1 ? deadheadRoutePoints : deadheadPoints;
     if (routePoints.length <= 1) return false;
     const maxDeadheadHops = maxAutoStops - stops.length;
-    const initialSegment = getRouteSegmentFromPoint(routePoints, routePoint);
+    const initialSegment = getShortestRouteSegmentFromPoint(
+      routePoints,
+      routePoint
+    );
     if (initialSegment.length === 0) return false;
     let segment = initialSegment.slice(1);
     let hopCount = 0;
@@ -1005,9 +1034,8 @@ const buildAutoStops = (
         restTriggerElapsed !== null &&
         currentDeparture !== null &&
         currentDeparture >= restTriggerElapsed;
-      if (reachesRestBeforeTimingPoint || restAlreadyBeforeTimingPoint) {
-        return true;
-      }
+      const shouldContinueThroughTimingPoint =
+        reachesRestBeforeTimingPoint || restAlreadyBeforeTimingPoint;
       const setting = getStopSetting(trainRun, routePoint.routeNodeId, true);
       const status = setting?.status ?? "stop";
       const isPass = status === "pass";
@@ -1046,6 +1074,7 @@ const buildAutoStops = (
       ) {
         return false;
       }
+      if (shouldContinueThroughTimingPoint) continue;
       if (shouldRestHere) return true;
     }
 

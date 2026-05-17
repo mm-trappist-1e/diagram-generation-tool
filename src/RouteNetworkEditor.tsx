@@ -1485,11 +1485,6 @@ const shouldReverseRouteTemplatePlatformOrder = (routeNode: RouteNode) => {
   return isRotationReversed !== isFlipped;
 };
 
-const getActualConnectionSide = (
-  canonicalSide: RoutePortSide,
-  rotation: number
-) => rotatePortSideByDegrees(canonicalSide, rotation);
-
 const getNextConnectionType = (
   currentType: ConnectionType,
   selectedEdgeCount: number
@@ -7738,7 +7733,7 @@ export const RouteNetworkEditor = ({
       return point.x >= projected.x ? 0 : 1;
     }
     if (normalizedRotation === 180) {
-      return point.y >= projected.y ? 1 : 0;
+      return point.y >= projected.y ? 0 : 1;
     }
     return point.y >= projected.y ? 0 : 1;
   };
@@ -7779,25 +7774,51 @@ export const RouteNetworkEditor = ({
     trackIndex: number
   ): ConnectionType => (trackIndex === 0 ? "passing12" : "passing21");
 
+  const getSplitActualSidesForSegment = (segment: {
+    from: Point;
+    to: Point;
+  }) => {
+    if (
+      Math.abs(segment.to.x - segment.from.x) >=
+      Math.abs(segment.to.y - segment.from.y)
+    ) {
+      const movesRight = segment.to.x >= segment.from.x;
+      return {
+        entrySide: movesRight
+          ? ("left" as RoutePortSide)
+          : ("right" as RoutePortSide),
+        exitSide: movesRight
+          ? ("right" as RoutePortSide)
+          : ("left" as RoutePortSide),
+      };
+    }
+    const movesDown = segment.to.y >= segment.from.y;
+    return {
+      entrySide: movesDown
+        ? ("top" as RoutePortSide)
+        : ("bottom" as RoutePortSide),
+      exitSide: movesDown
+        ? ("bottom" as RoutePortSide)
+        : ("top" as RoutePortSide),
+    };
+  };
+
   const getConnectionSplitPorts = (
     connectionType: ConnectionType,
     rotation: number,
     segment: { from: Point; to: Point },
     trackIndex: number
   ) => {
-    const isVertical = rotation === 90 || rotation === 270;
-    const forward = isVertical
-      ? segment.to.y >= segment.from.y
-      : segment.to.x >= segment.from.x;
-    const entryCanonicalSide: RoutePortSide = forward ? "left" : "right";
-    const exitCanonicalSide: RoutePortSide = forward ? "right" : "left";
+    const { entrySide, exitSide } = getSplitActualSidesForSegment(segment);
+    const entryCanonicalSide = rotatePortSideByDegrees(entrySide, -rotation);
+    const exitCanonicalSide = rotatePortSideByDegrees(exitSide, -rotation);
     const getPortIndex = (canonicalSide: RoutePortSide) =>
       connectionType === "turnout" && canonicalSide === "left" ? 0 : trackIndex;
 
     return {
-      entryPortSide: getActualConnectionSide(entryCanonicalSide, rotation),
+      entryPortSide: entrySide,
       entryPortIndex: getPortIndex(entryCanonicalSide),
-      exitPortSide: getActualConnectionSide(exitCanonicalSide, rotation),
+      exitPortSide: exitSide,
       exitPortIndex: getPortIndex(exitCanonicalSide),
     };
   };

@@ -393,6 +393,35 @@ export const App = () => {
     });
   };
 
+  const resetAllWorkspaces = () => {
+    if (
+      !window.confirm(
+        "すべてのワークスペースを初期状態に戻します。保存済みの編集内容は削除されます。よろしいですか？"
+      )
+    ) {
+      return;
+    }
+
+    const workspace = createWorkspace(
+      "ワークスペース 1",
+      getDefaultWorkspaceState()
+    );
+    window.localStorage.removeItem(localStorageKey);
+    window.localStorage.removeItem(localStorageBackupKey);
+    window.localStorage.removeItem(localStorageFailedRestoreKey);
+    window.localStorage.removeItem(legacyLocalStorageKey);
+    window.localStorage.removeItem(legacyLocalStorageBackupKey);
+    setEditingWorkspaceId("");
+    setWorkspaceNameDraft("");
+    setSelectedTrainRunId(workspace.history.present.trainRuns[0]?.id ?? "");
+    setSelectedRouteTemplateId("");
+    setRouteTemplateEditKey("serviceRouteSections");
+    setWorkspaceStore({
+      activeWorkspaceId: workspace.id,
+      workspaces: [workspace],
+    });
+  };
+
   const serializeWorkspaceStore = (): StoredWorkspaceStore => ({
     version: 1,
     activeWorkspaceId: workspaceStore.activeWorkspaceId,
@@ -502,6 +531,13 @@ export const App = () => {
               className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
             >
               {isDarkTheme ? "ライトテーマ" : "グレーテーマ"}
+            </button>
+            <button
+              type="button"
+              onClick={resetAllWorkspaces}
+              className="rounded border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-500/70 dark:bg-slate-800 dark:text-red-200 dark:hover:bg-red-950/40"
+            >
+              初期化
             </button>
           </div>
         </header>
